@@ -2,3 +2,4 @@
 /dist/
 /oftest.egg-info/
 *.pyc
+.idea/
