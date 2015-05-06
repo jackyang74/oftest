@@ -563,3 +563,76 @@ class AsyncConfigGet(base_tests.SimpleProtocol):
         self.assertEquals(response.packet_in_mask_equal_master & 0x07, 0x07)
         self.assertEquals(response.port_status_mask_equal_master & 0x07, 0x07)
         self.assertEquals(response.flow_removed_mask_equal_master & 0x0f, 0x0f)
+
+class ConfigGet(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Get Config Request")
+        request = ofp.message.get_config_request()
+        response, _ = self.controller.transact(request)
+        logging.info(response.show())
+        self.assertTrue(response is not None,
+                        "No response to get config request")
+
+class FlowAddRequest(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Flow Add Request")
+        request = ofp.message.flow_add()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+class FlowDeleteRequest(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Flow Delete Request")
+        request = ofp.message.flow_delete()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+
+class FlowModifyRequest(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Flow Modify Request")
+        request = ofp.message.flow_modify()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+class BarrierRequest(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Barrier Request")
+        request = ofp.message.barrier_request()
+        response, _ = self.controller.transact(request)
+        self.assertTrue(response is not None,
+                        "No response to Barrier Request")
+
+class Hello(base_tests.SimpleProtocol):
+    """
+
+    """
+
+    def runTest(self):
+        logging.info("Sending Hello")
+        request = ofp.message.hello()
+        self.controller.message_send(request)
+
