@@ -634,12 +634,11 @@ class Hello(base_tests.SimpleProtocol):
     def runTest(self):
         logging.info("Sending Hello")
         request = ofp.message.hello()
-        self.controller.register(ofp.OFPT_ERROR, error_handler)
+        self.controller.register(ofp.OFPT_ERROR, self.error_handler)
         self.controller.message_send(request)
 
-
-# handler for processing EEROR message
-def error_handler(self, controller, msg, rawmsg):
-        logging.info("Got an ERROR message, type=%d, code=%d" \
-                          % (msg.err_type, msg.code) \
-                          )
+    # handler for processing EEROR message
+    def error_handler(self, controller, msg, rawmsg):
+            logging.info("Got an ERROR message, type=%d, code=%d" \
+                              % (msg.err_type, msg.code) \
+                              )
