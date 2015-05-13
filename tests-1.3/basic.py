@@ -18,6 +18,7 @@ import time
 
 from oftest.testutils import *
 
+
 @group('basic')
 class HelloVersionAnnouncement(base_tests.SimpleProtocol):
     """
@@ -30,14 +31,16 @@ class HelloVersionAnnouncement(base_tests.SimpleProtocol):
         response, _ = self.controller.poll(ofp.OFPT_HELLO)
         self.assertTrue(response is not None,
                         "No Hello message was received")
-        self.assertEqual(response.version, ofp.OFP_VERSION+1,
-                        "Incorrect version 0x{0:x} from HELLO message sent from switch".format(response.version))
+        self.assertEqual(response.version, ofp.OFP_VERSION + 1,
+                         "Incorrect version 0x{0:x} from HELLO message sent from switch".format(response.version))
+
 
 @group('smoke')
 class Echo(base_tests.SimpleProtocol):
     """
     Test echo response with no data
     """
+
     def runTest(self):
         request = ofp.message.echo_request()
         response, pkt = self.controller.transact(request)
@@ -49,10 +52,12 @@ class Echo(base_tests.SimpleProtocol):
                          'response xid != request xid')
         self.assertEqual(len(response.data), 0, 'response data non-empty')
 
+
 class EchoWithData(base_tests.SimpleProtocol):
     """
     Test echo response with short string data
     """
+
     def runTest(self):
         data = 'OpenFlow Will Rule The World'
         request = ofp.message.echo_request(data=data)
@@ -66,22 +71,26 @@ class EchoWithData(base_tests.SimpleProtocol):
         self.assertEqual(request.data, response.data,
                          'response data != request data')
 
+
 class FeaturesRequest(base_tests.SimpleProtocol):
     """
     Test features_request to make sure we get a response
 
     Does NOT test the contents; just that we get a response
     """
+
     def runTest(self):
         request = ofp.message.features_request()
-        response,_ = self.controller.transact(request)
+        response, _ = self.controller.transact(request)
         self.assertTrue(response is not None,
                         'Did not get features reply')
+
 
 class DefaultDrop(base_tests.SimpleDataPlane):
     """
     Check that an empty flowtable results in drops
     """
+
     def runTest(self):
         in_port, = openflow_ports(1)
         delete_all_flows(self.controller)
@@ -91,6 +100,7 @@ class DefaultDrop(base_tests.SimpleDataPlane):
         verify_no_packet_in(self, pkt, None)
         verify_packets(self, pkt, [])
 
+
 class OutputExact(base_tests.SimpleDataPlane):
     """
     Test output function for an exact-match flow
@@ -99,6 +109,7 @@ class OutputExact(base_tests.SimpleDataPlane):
     Then, for all other ports B != A, verifies that sending a matching packet
     to B results in an output to A.
     """
+
     def runTest(self):
         ports = sorted(config["port_map"].keys())
 
@@ -110,17 +121,17 @@ class OutputExact(base_tests.SimpleDataPlane):
 
         for out_port in ports:
             request = ofp.message.flow_add(
-                    table_id=test_param_get("table", 0),
-                    cookie=42,
-                    match=match,
-                    instructions=[
-                        ofp.instruction.apply_actions(
-                            actions=[
-                                ofp.action.output(
-                                    port=out_port,
-                                    max_len=ofp.OFPCML_NO_BUFFER)])],
-                    buffer_id=ofp.OFP_NO_BUFFER,
-                    priority=1000)
+                table_id=test_param_get("table", 0),
+                cookie=42,
+                match=match,
+                instructions=[
+                    ofp.instruction.apply_actions(
+                        actions=[
+                            ofp.action.output(
+                                port=out_port,
+                                max_len=ofp.OFPCML_NO_BUFFER)])],
+                buffer_id=ofp.OFP_NO_BUFFER,
+                priority=1000)
 
             logging.info("Inserting flow sending matching packets to port %d", out_port)
             self.controller.message_send(request)
@@ -133,6 +144,7 @@ class OutputExact(base_tests.SimpleDataPlane):
                 self.dataplane.send(in_port, pkt)
                 verify_packets(self, pkt, [out_port])
 
+
 class OutputWildcard(base_tests.SimpleDataPlane):
     """
     Test output function for a match-all (but not table-miss) flow
@@ -141,6 +153,7 @@ class OutputWildcard(base_tests.SimpleDataPlane):
     Then, for all other ports B != A, verifies that sending a packet
     to B results in an output to A.
     """
+
     def runTest(self):
         ports = sorted(config["port_map"].keys())
 
@@ -150,16 +163,16 @@ class OutputWildcard(base_tests.SimpleDataPlane):
 
         for out_port in ports:
             request = ofp.message.flow_add(
-                    table_id=test_param_get("table", 0),
-                    cookie=42,
-                    instructions=[
-                        ofp.instruction.apply_actions(
-                            actions=[
-                                ofp.action.output(
-                                    port=out_port,
-                                    max_len=ofp.OFPCML_NO_BUFFER)])],
-                    buffer_id=ofp.OFP_NO_BUFFER,
-                    priority=1000)
+                table_id=test_param_get("table", 0),
+                cookie=42,
+                instructions=[
+                    ofp.instruction.apply_actions(
+                        actions=[
+                            ofp.action.output(
+                                port=out_port,
+                                max_len=ofp.OFPCML_NO_BUFFER)])],
+                buffer_id=ofp.OFP_NO_BUFFER,
+                priority=1000)
 
             logging.info("Inserting flow sending all packets to port %d", out_port)
             self.controller.message_send(request)
@@ -172,6 +185,7 @@ class OutputWildcard(base_tests.SimpleDataPlane):
                 self.dataplane.send(in_port, pkt)
                 verify_packets(self, pkt, [out_port])
 
+
 class PacketInExact(base_tests.SimpleDataPlane):
     """
     Test packet in function for an exact-match flow
@@ -179,6 +193,7 @@ class PacketInExact(base_tests.SimpleDataPlane):
     Send a packet to each dataplane port and verify that a packet
     in message is received from the controller for each
     """
+
     def runTest(self):
         delete_all_flows(self.controller)
 
@@ -209,6 +224,7 @@ class PacketInExact(base_tests.SimpleDataPlane):
             verify_packet_in(self, pkt, of_port, ofp.OFPR_ACTION)
             verify_packets(self, pkt, [])
 
+
 class PacketInWildcard(base_tests.SimpleDataPlane):
     """
     Test packet in function for a match-all flow
@@ -216,6 +232,7 @@ class PacketInWildcard(base_tests.SimpleDataPlane):
     Send a packet to each dataplane port and verify that a packet
     in message is received from the controller for each
     """
+
     def runTest(self):
         delete_all_flows(self.controller)
 
@@ -243,6 +260,7 @@ class PacketInWildcard(base_tests.SimpleDataPlane):
             verify_packet_in(self, pkt, of_port, ofp.OFPR_ACTION)
             verify_packets(self, pkt, [])
 
+
 class PacketInMiss(base_tests.SimpleDataPlane):
     """
     Test packet in function for a table-miss flow
@@ -250,6 +268,7 @@ class PacketInMiss(base_tests.SimpleDataPlane):
     Send a packet to each dataplane port and verify that a packet
     in message is received from the controller for each
     """
+
     def runTest(self):
         delete_all_flows(self.controller)
 
@@ -276,8 +295,9 @@ class PacketInMiss(base_tests.SimpleDataPlane):
             logging.info("PacketInMiss test, port %d", of_port)
             self.dataplane.send(of_port, pkt)
             verify_packet_in(self, pkt, of_port, ofp.OFPR_NO_MATCH)
-            #verify_packets(self, pkt, []) ensures no packets are received from other ports
+            # verify_packets(self, pkt, []) ensures no packets are received from other ports
             verify_packets(self, pkt, [])
+
 
 class PacketOut(base_tests.SimpleDataPlane):
     """
@@ -286,6 +306,7 @@ class PacketOut(base_tests.SimpleDataPlane):
     Send packet out message to controller for each dataplane port and
     verify the packet appears on the appropriate dataplane port
     """
+
     def runTest(self):
         pkt = str(simple_tcp_packet())
 
@@ -300,6 +321,7 @@ class PacketOut(base_tests.SimpleDataPlane):
             self.controller.message_send(msg)
             verify_packets(self, pkt, [of_port])
 
+
 class FlowRemoveAll(base_tests.SimpleProtocol):
     """
     Remove all flows; required for almost all tests
@@ -309,12 +331,13 @@ class FlowRemoveAll(base_tests.SimpleProtocol):
     and should be a precondition to any more complicated deletion test (e.g.,
     delete_strict vs. delete)
     """
+
     def runTest(self):
-        for i in range(1,5):
+        for i in range(1, 5):
             logging.debug("Adding flow %d", i)
             request = ofp.message.flow_add(
                 buffer_id=ofp.OFP_NO_BUFFER,
-                priority=i*1000)
+                priority=i * 1000)
             self.controller.message_send(request)
         do_barrier(self.controller)
 
@@ -333,6 +356,7 @@ class DescStats(base_tests.SimpleProtocol):
 
     Only verifies we get a single reply.
     """
+
     def runTest(self):
         request = ofp.message.desc_stats_request()
         logging.info("Sending desc stats request")
@@ -341,12 +365,14 @@ class DescStats(base_tests.SimpleProtocol):
         logging.info(response.show())
         self.assertEquals(response.flags, 0, "Unexpected bit set in desc stats reply flags")
 
+
 class FlowStats(base_tests.SimpleProtocol):
     """
     Flow stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         logging.info("Sending flow stats request")
         stats = get_flow_stats(self, ofp.match())
@@ -354,12 +380,14 @@ class FlowStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class AggregateStats(base_tests.SimpleProtocol):
     """
     Aggregate flow stats multipart transaction
 
     Only verifies we get a single reply.
     """
+
     def runTest(self):
         request = ofp.message.aggregate_stats_request(
             table_id=ofp.OFPTT_ALL,
@@ -373,12 +401,14 @@ class AggregateStats(base_tests.SimpleProtocol):
         logging.info(response.show())
         self.assertEquals(response.flags, 0, "Unexpected bit set in aggregate stats reply flags")
 
+
 class TableStats(base_tests.SimpleProtocol):
     """
     Table stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         logging.info("Sending table stats request")
         stats = get_stats(self, ofp.message.table_stats_request())
@@ -386,12 +416,14 @@ class TableStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class PortStats(base_tests.SimpleProtocol):
     """
     Port stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.port_stats_request(port_no=ofp.OFPP_ANY)
         logging.info("Sending port stats request")
@@ -400,12 +432,14 @@ class PortStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class QueueStats(base_tests.SimpleProtocol):
     """
     Queue stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.queue_stats_request(port_no=ofp.OFPP_ANY,
                                                   queue_id=ofp.OFPQ_ALL)
@@ -415,12 +449,14 @@ class QueueStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class GroupStats(base_tests.SimpleProtocol):
     """
     Group stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.group_stats_request(group_id=ofp.OFPG_ALL)
         logging.info("Sending group stats request")
@@ -429,12 +465,14 @@ class GroupStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class GroupDescStats(base_tests.SimpleProtocol):
     """
     Group description multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.group_desc_stats_request()
         logging.info("Sending group desc stats request")
@@ -443,12 +481,14 @@ class GroupDescStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class GroupFeaturesStats(base_tests.SimpleProtocol):
     """
     Group features multipart transaction
 
     Only verifies we get a single reply.
     """
+
     def runTest(self):
         request = ofp.message.group_features_stats_request()
         logging.info("Sending group features stats request")
@@ -457,12 +497,14 @@ class GroupFeaturesStats(base_tests.SimpleProtocol):
         logging.info(response.show())
         self.assertEquals(response.flags, 0, "Unexpected bit set in group features stats reply flags")
 
+
 class MeterStats(base_tests.SimpleProtocol):
     """
     Meter stats multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.meter_stats_request(meter_id=ofp.OFPM_ALL)
         logging.info("Sending meter stats request")
@@ -471,12 +513,14 @@ class MeterStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class MeterConfigStats(base_tests.SimpleProtocol):
     """
     Meter config multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         request = ofp.message.meter_config_stats_request(meter_id=ofp.OFPM_ALL)
         logging.info("Sending meter config stats request")
@@ -485,12 +529,14 @@ class MeterConfigStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class MeterFeaturesStats(base_tests.SimpleProtocol):
     """
     Meter features multipart transaction
 
     Only verifies we get a single reply.
     """
+
     def runTest(self):
         request = ofp.message.meter_features_stats_request()
         logging.info("Sending meter features stats request")
@@ -499,13 +545,15 @@ class MeterFeaturesStats(base_tests.SimpleProtocol):
         logging.info(response.show())
         self.assertEquals(response.flags, 0, "Unexpected bit set in meter features stats reply flags")
 
-@disabled # pyloxi does not yet support table features
+
+@disabled  # pyloxi does not yet support table features
 class TableFeaturesStats(base_tests.SimpleProtocol):
     """
     Table features multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         logging.info("Sending table features stats request")
         stats = get_stats(self, ofp.message.table_features_stats_request())
@@ -513,18 +561,21 @@ class TableFeaturesStats(base_tests.SimpleProtocol):
         for entry in stats:
             logging.info(entry.show())
 
+
 class PortDescStats(base_tests.SimpleProtocol):
     """
     Port description multipart transaction
 
     Only verifies we get a reply.
     """
+
     def runTest(self):
         logging.info("Sending port desc stats request")
         stats = get_stats(self, ofp.message.port_desc_stats_request())
         logging.info("Received %d port desc stats entries", len(stats))
         for entry in stats:
             logging.info(entry.show())
+
 
 class PortConfigMod(base_tests.SimpleProtocol):
     """
@@ -537,7 +588,7 @@ class PortConfigMod(base_tests.SimpleProtocol):
 
     def runTest(self):
         logging.info("Running " + str(self))
-        for of_port, _ in config["port_map"].items(): # Grab first port
+        for of_port, _ in config["port_map"].items():  # Grab first port
             break
 
         (_, config1, _) = \
@@ -565,6 +616,7 @@ class PortConfigMod(base_tests.SimpleProtocol):
                              ofp.OFPPC_NO_PACKET_IN)
         self.assertTrue(rv != -1, "Error sending port mod")
 
+
 class AsyncConfigGet(base_tests.SimpleProtocol):
     """
     Verify initial async config
@@ -581,6 +633,7 @@ class AsyncConfigGet(base_tests.SimpleProtocol):
         self.assertEquals(response.port_status_mask_equal_master & 0x07, 0x07)
         self.assertEquals(response.flow_removed_mask_equal_master & 0x0f, 0x0f)
 
+
 class ConfigGet(base_tests.SimpleProtocol):
     """
 
@@ -594,6 +647,7 @@ class ConfigGet(base_tests.SimpleProtocol):
         self.assertTrue(response is not None,
                         "No response to get config request")
 
+
 class FlowAddRequest(base_tests.SimpleProtocol):
     """
 
@@ -605,6 +659,7 @@ class FlowAddRequest(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         # send Barrier Message to check errors
         do_barrier(self.controller)
+
 
 class FlowDeleteRequest(base_tests.SimpleProtocol):
     """
@@ -631,6 +686,7 @@ class FlowModifyRequest(base_tests.SimpleProtocol):
         # send Barrier Message to check errors
         do_barrier(self.controller)
 
+
 class BarrierRequest(base_tests.SimpleProtocol):
     """
 
@@ -642,6 +698,7 @@ class BarrierRequest(base_tests.SimpleProtocol):
         response, _ = self.controller.transact(request)
         self.assertTrue(response is not None,
                         "No response to Barrier Request")
+
 
 class Hello(base_tests.SimpleProtocol):
     """
