@@ -598,7 +598,8 @@ class Controller(Thread):
         else:
             raise ValueError("Unexpected exp_msg argument %r" % exp_msg)
 
-        self.logger.debug("Polling for %s", klass.__name__)
+        if klass is not None:
+            self.logger.debug("Polling for %s", klass.__name__)
 
         # Take the packet from the queue
         def grab():
