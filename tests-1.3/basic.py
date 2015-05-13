@@ -14,8 +14,24 @@ import logging
 from oftest import config
 import oftest.base_tests as base_tests
 import ofp
+import time
 
 from oftest.testutils import *
+
+@group('basic')
+class HelloVersionAnnouncement(base_tests.SimpleProtocol):
+    """
+    TestCase 10.30 --> Supported version announcement
+    Check the Switch reports the correct version to the controller
+    """
+
+    def runTest(self):
+        logging.info("10.30 --> Supported version announcement")
+        response, _ = self.controller.poll(ofp.OFPT_HELLO)
+        self.assertTrue(response is not None,
+                        "No Hello message was received")
+        self.assertEqual(response.version, ofp.OFP_VERSION+1,
+                        "Incorrect version 0x{0:x} from HELLO message sent from switch".format(response.version))
 
 @group('smoke')
 class Echo(base_tests.SimpleProtocol):
@@ -260,6 +276,7 @@ class PacketInMiss(base_tests.SimpleDataPlane):
             logging.info("PacketInMiss test, port %d", of_port)
             self.dataplane.send(of_port, pkt)
             verify_packet_in(self, pkt, of_port, ofp.OFPR_NO_MATCH)
+            #verify_packets(self, pkt, []) ensures no packets are received from other ports
             verify_packets(self, pkt, [])
 
 class PacketOut(base_tests.SimpleDataPlane):
@@ -634,11 +651,7 @@ class Hello(base_tests.SimpleProtocol):
     def runTest(self):
         logging.info("Sending Hello")
         request = ofp.message.hello()
-        self.controller.register(ofp.OFPT_ERROR, self.error_handler)
+        request.version = 3
         self.controller.message_send(request)
+        time.sleep(1)
 
-    # handler for processing EEROR message
-    def error_handler(self, controller, msg, rawmsg):
-            logging.info("Got an ERROR message, type=%d, code=%d" \
-                              % (msg.err_type, msg.code) \
-                              )
