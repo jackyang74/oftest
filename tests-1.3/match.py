@@ -40,8 +40,18 @@ class MatchTest(base_tests.SimpleDataPlane):
         logging.info("Running match test for %s", match.show())
 
         delete_all_flows(self.controller)
-
+        # exit(0)
         logging.info("Inserting flow sending matching packets to port %d", out_port)
+
+        request = ofp.message.flow_add(
+                table_id=table_id,
+                instructions=[
+                    ofp.instruction.write_metadata(metadata=0x0000000300000000)
+                ],
+                priority=0)
+        self.controller.message_send(request)
+
+
         request = ofp.message.flow_add(
                 table_id=table_id,
                 match=match,
@@ -52,7 +62,7 @@ class MatchTest(base_tests.SimpleDataPlane):
                                 port=out_port,
                                 max_len=ofp.OFPCML_NO_BUFFER)])],
                 buffer_id=ofp.OFP_NO_BUFFER,
-                priority=1000)
+                priority=15)
         self.controller.message_send(request)
 
         logging.info("Inserting match-all flow sending packets to controller")

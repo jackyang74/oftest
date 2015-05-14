@@ -31,8 +31,44 @@ class HelloVersionAnnouncement(base_tests.SimpleProtocol):
         response, _ = self.controller.poll(ofp.OFPT_HELLO)
         self.assertTrue(response is not None,
                         "No Hello message was received")
-        self.assertEqual(response.version, ofp.OFP_VERSION + 1,
+        self.assertEqual(response.version, ofp.OFP_VERSION,
                          "Incorrect version 0x{0:x} from HELLO message sent from switch".format(response.version))
+
+
+@group('basic')
+class HelloVersionNegotiation(base_tests.SimpleProtocol):
+    """
+    TestCase 10.40 --> Supported version negotiation
+    Check the Switch negotiates the correct version with the controller
+    """
+
+    def runTest(self):
+        logging.info("10.40 --> Supported version negotiation")
+        response, _ = self.controller.poll(ofp.message.hello_failed_error_msg)
+        self.assertFalse((response is not None) and (response.code == ofp.OFPHFC_INCOMPATIBLE),
+                         "Hello Error was received for the reason Version INCOMPATIBLE")
+
+
+@group('basic')
+class HelloVersionIncompatible(base_tests.SimpleProtocol):
+    """
+    TestCase 10.50 --> No common version negotiated
+    Verify the switch reports the correct error message and terminates the
+    connection when no common version can be negotiated with the controller.
+    """
+
+    def runTest(self):
+        logging.info("10.40 --> No common version negotiated")
+        request = ofp.message.hello()
+        # change hello message version to incorrect number
+        request.version = ofp.OFP_VERSION - 1
+        self.controller.message_send(request)
+
+        response, _ = self.controller.poll(ofp.message.hello_failed_error_msg)
+        self.assertTrue(response is not None,
+                        "No Error message was received")
+        self.assertTrue(response.code == ofp.OFPHFC_INCOMPATIBLE,
+                        "Hello Error with reason Version INCOMPATIBLE was not received")
 
 
 @group('smoke')
