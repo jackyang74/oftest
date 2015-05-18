@@ -14,7 +14,7 @@ from oftest.testutils import *
 
 
 @group('TestSuite30')
-class HelloVersionAnnouncement(base_tests.SimpleProtocol):
+class PortDown(base_tests.SimpleProtocol):
     """
     Test case 30.40: Port administratively down
     """
