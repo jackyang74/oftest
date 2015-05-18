@@ -1,0 +1,275 @@
+
+Tests are shown grouped by module. If a test is in any groups beyond
+"standard" and its module's group then they are shown in parentheses.
+
+Tests marked with '*' are non-standard and may require vendor extensions or
+special switch configuration. These are not part of the "standard" test group.
+
+Tests marked with '!' are disabled because they are experimental,
+special-purpose, or are too long to be run normally. These are not part of
+the "standard" test group or their module's test group.
+
+Tests marked (TP1) after name take --test-params including:
+
+    'vid=N;strip_vlan=bool;add_vlan=bool'
+
+Test List:
+
+  Module          load: Prototype test cases related to operation under load
+           PacketInLoad: : Generate lots of packet-in messages
+            FlowModLoad: : No description
+          PacketOutLoad: : Generate lots of packet-out messages
+         *  LoadBarrier: : Test barrier under load with loopback
+        FlowRemovedLoad: : Generate lots of flow-removed messages
+  Module    bsn_mirror: 
+     *  BSNMirrorAction: : Exercise BSN vendor extension for copying packets to a mirror destination
+  Module        pktact: Test cases for testing actions taken on packets
+            ModifyL4Dst: : Modify the dest TCP port of a TCP packet (TP1)
+            ModifyL2Src: : Modify the source MAC address (TP1)
+         AllPlusIngress: : Send to OFPP_ALL port and ingress port
+       DirectArpPackets: : Verify ARP parsing (valid and corrupted packets) and ARP matching
+         DirectTwoPorts: : Send packet to two egress ports
+      WildcardPriorityWithDelete: : (smoke) 1. Add wildcard match flow, verify packet received.
+       DirectLlcPackets: : Verify LLC/SNAP parsing (valid and corrupted packets) and matching
+                  Flood: : Flood to all ports except ingress
+      ModifyL2DstIngressMC: : Modify the L2 dest and send to the ingress port
+         ModifyL4SrcUdp: : Modify the source UDP port of a UDP packet
+      SingleWildcardMatchTagged: : SingleWildcardMatch with tagged packets
+      SingleWildcardMatchPriority: : SingleWildcardMatchPriority
+      SingleWildcardMatch: : Exercise wildcard matching for all ports
+      StripVLANTagWithTagMatchWildcarded: : Strip the VLAN tag from a tagged packet.
+      SingleWildcardMatchPriorityInsertModifyDelete: : No description
+       FloodPlusIngress: : Flood to all ports plus send to ingress port
+       WildcardPriority: : 1. Add wildcard flow, verify packet received.
+               DirectMC: : Multicast to all ports including ingress
+     ! PacketOnlyTagged: : Just send a packet thru the switch
+            ModifyL2Dst: : Modify the dest MAC address (TP1)
+       DirectPacketICMP: : (smoke) Send ICMP packet to single egress port
+       ModifyL2SrcDstMC: : Modify the L2 source and dest and send to 2 ports
+             AddVLANTag: : (smoke) Add a VLAN tag to an untagged packet
+       ExactMatchTagged: : Exact match for all port pairs with tagged pkts
+            ModifyL3Dst: : Modify the dest IP address of an IP packet (TP1)
+              ModifyAll: : (smoke) Modify all supported fields and output to a port
+       AllWildcardMatch: : Create Wildcard-all flow and exercise for all ports
+            ModifyL4Src: : Modify the source TCP port of a TCP packet (TP1)
+             ExactMatch: : Exercise exact matching for all port pairs
+           DirectPacket: : (smoke) Send packet to single egress port
+              ModifyVID: : Modify the VLAN ID in the VLAN tag of a tagged packet
+             FlowToggle: : Add flows to the table and modify them repeatedly
+              ModifyTOS: : Modify the IP type of service of an IP packet (TP1)
+            ! IterCases: : Iterate over a bunch of test cases
+      DirectMCNonIngress: : Multicast to all non-ingress ports
+      AllWildcardMatchTagged: : AllWildcardMatch with tagged packets
+              MatchEach: : (smoke) Check that each match field is actually matched on.
+      DirectVlanPackets: : Verify VLAN parsing (valid and corrupted packets) and ARP matching
+            ! MixedVLAN: : Test mixture of VLAN tag actions
+    ! ExactMatchTaggedMany: : ExactMatchTagged with many VLANS
+      DirectPacketControllerQueue: : Send a packet from each of the openflow ports
+      ModifyL2DstIngress: : Modify the L2 dest and send to the ingress port
+                    All: : Send to OFPP_ALL port
+      ModifyVIDWithTagMatchWildcarded: : With vlan ID and priority wildcarded, perform SET_VLAN_VID ofp.action.
+          BaseMatchCase: : No description
+           ! PacketOnly: : Just send a packet thru the switch
+      DirectPacketController: : (smoke) Send packet to the controller port
+         ModifyL4DstUdp: : Modify the dest UDP port of a UDP packet
+          ModifyL2DstMC: : Modify the L2 dest and send to 2 ports
+         FloodMinusPort: : Config port with No_Flood and test Flood action
+      AllExceptOneWildcardMatchTagged: : Match one field with tagged packets
+   *  DirectVlanPacketsDoubleTagged: : VLAN parsing for double tagged packets.  Spec is ambiguous about
+      DirectBadPacketBase: : Base class for sending single packets with single flow table entries.
+       ModifyL2DstVIDMC: : Modify the L2 dest and send to 2 ports
+          ModifyL2SrcMC: : Modify the source MAC address (TP1) and send to multiple
+           StripVLANTag: : Strip the VLAN tag from a tagged packet
+      DirectBadLlcPackets: : Verify LLC/SNAP parsing and matching. Focus on packet corruptions
+      DirectBadIpUdpPackets: : Verify IP/UDP parsing and matching. Focus on packet corruptions
+      DirectBadIpTcpPacketsBase: : Base class for TCP and UDP parsing/matching verification under corruptions
+      DirectBadIpTcpPackets: : Verify IP/TCP parsing and matching. Focus on packet corruptions
+          ModifyVlanPcp: : Modify the priority field of the VLAN tag of a tagged packet
+      DirectPacketQueue: : Send packet to single queue on single egress port
+      ModifyVIDToIngress: : Modify the VLAN ID in the VLAN tag of a tagged packet and send to
+            ModifyL3Src: : Modify the source IP address of an IP packet (TP1)
+      AllExceptOneWildcardMatch: : Match exactly one field
+  Module       actions: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+            ModifyL4Dst: : ModifyL4Dst: Modify the dest TCP port of a TCP packet
+           Announcement: : Announcement : Get all supported actions by the switch.
+             AddVlanTag: : AddVlanTag : Adds VLAN Tag to untagged packet.
+            ModifyL2Src: : ModifyL2Src :Modify the source MAC address
+              ModifyTos: : ModifyTOS :Modify the IP type of service of an IP packet
+           ForwardLocal: : ForwardLocal : Packet is sent to  OFPP_LOCAL port . 
+              VlanPrio2: : ModifyVlanPrio : Modify VLAN priority to tagged packet.
+             ForwardAll: : ForwardAll : Packet is sent to all dataplane ports
+            ModifyL4Src: : ModifyL4Src : Modify the source TCP port of a TCP packet
+           ForwardTable: : ForwardTable : Perform actions in flow table. Only for packet-out messages.
+      ForwardController: : ForwardController : Packet is sent to controller 
+              VlanPrio1: : AddVlanPrioUntaggedPkt : Add VLAN priority to untagged packet.
+          ModifyVlanTag: : ModifyVlanTag : Modifies VLAN Tag to tagged packet.
+          ForwardInport: : ForwardInPort : Packet sent to virtual port IN_PORT
+            ModifyL3Dst: : ModifyL3Dst :Modify the dest IP address of an IP packet
+            ModifyL3Src: : ModifyL3Src : Modify the source IP address of an IP packet
+               NoAction: : NoActionDrop : no action added to flow , drops the packet.
+           ForwardFlood: : Forward:Flood : Packet is sent to all dataplane ports
+            ModifyL2Dst: : ModifyL2SDSt :Modify the dest MAC address
+  Module  flow_matches: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+             UdpDstPort: : Verify match on Single header field -- Udp Destination Port
+                  IpTos: : "Verify match on single Header Field Field -- Type of service
+      EthernetDstAddress: : Verify match on single Header Field Field -- Ethernet Dst Address
+             UdpSrcPort: : Verify match on Single header field -- Udp Source Port,
+       AllWildcardMatch: : Verify for an all wildcarded flow all the injected packets would match that flow
+               ICMPCode: : Verify match on Single header field -- ICMP code,
+      MultipleHeaderFieldL2: : Verify match on multiple header field -- Ethernet Type, Ethernet Source Address, Ethernet Destination Address
+      MultipleHeaderFieldL4: : Verify match on multiple header field -- Tcp Source Port, Tcp Destination Port
+                VlanPCP: : "Verify match on single Header Field Field -- Vlan Priority
+      EthernetSrcAddress: : Verify match on single header field -- Ethernet Src Address
+      WildcardMatchPrio: : Verify that Wildcard Match with highest priority overrides the low priority WildcardMatch
+               ICMPType: : Verify match on Single header field -- ICMP type,
+             ExactMatch: : Verify match on Single header field -- Exact Match
+            IngressPort: : Verify match on single Header Field Field -- In_port
+             TcpSrcPort: : Verify match on Single header field -- Tcp Source Port,
+             TcpDstPort: : Verify match on Single header field -- Tcp Destination Port
+              ArpOpcode: : "Verify match on single Header Field -- Arp Protocol
+         ExactMatchPrio: : Verify that Exact Match has highest priority
+            ArpTargetIP: : "Verify match on single Header Field -- Arp Protocol
+            ArpSenderIP: : "Verify match on single Header Field -- Arp Protocol
+                 VlanId: : Verify match on single Header Field Field -- Vlan Id
+             IpProtocol: : "Verify match on single Header Field Field -- Ip Protocol
+           EthernetType: : Verify match on single header field -- Ethernet Type
+  Module   nicira_role: Test the Nicira controller role extension
+     *  SlaveNoPacketIn: : Verify that slave connections do not receive OFPT_PACKET_IN messages but other roles do.
+   *! EqualAsyncMessages: : Verify that 'equal' controllers all get async events.
+     *  RolePermissions: : Verify that a slave connection cannot modify switch state, but
+               AnyReply: : Verify that a role request gets either a role reply or an error.
+          *! RoleSwitch: : Verify that when a connection becomes a master the existing master is
+  Module           cxn: Connection test cases
+      ! HandshakeNoEcho: : Complete handshake, but otherwise do nothing, and do not respond to echo.
+    ! HandshakeNoFeaturesRequest: : TCP connect to switch, send hello, but do not send features request,
+    ! CompleteHandshake: : Set up multiple controllers and complete handshake, but otherwise do nothing.
+        ! BaseHandshake: : Base handshake case to set up controller, but do not send hello.
+     ! HandshakeNoHello: : TCP connect to switch, but do not sent hello,
+      ! MonitorPacketIn: : Complete handshake and respond to echo request.  As packet-in messages
+     ! HandshakeAndDrop: : Complete handshake, but otherwise do nothing, and drop connection after a while.
+    ! HandshakeAndKeepalive: : Complete handshake and respond to echo request, but otherwise do nothing.
+  Module       latency: Latency tests
+       DataplaneLatency: : Measure and assert dataplane latency
+           PktinLatency: : Measure and assert packet-in latency
+  Module    port_stats: Flow stats test case.
+           AllPortStats: : Verify all port stats are properly retrieved.
+         MultiFlowStats: : Verify flow stats are properly retrieved.
+        SingleFlowStats: : (smoke) Verify flow stats are properly retrieved.
+  Module   flow_expire: Flow expire test case.
+             FlowExpire: : Verify flow expire messages are properly generated.
+  Module message_types: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+      DescStatsReplyBody: : Verify Description Stats message body
+   *  PortStatusMessage: : Verify Port Status Messages are sent to the controller 
+       QueueConfigReply: : Verify Queue Configuration Reply message body
+               ErrorMsg: : Verify OFPT_ERROR msg is implemented
+        ! HelloWithBody: : Verify switch should be able to receive OFPT_HELLO messages with body , 
+             PortModFwd: : Modify the behavior of physical port using Port Modification Messages
+       SetConfigRequest: : Verify OFPT_SET_CONFIG is implemented
+      PacketInBodyAction: : Verify the packet_in message body, when packet_in is generated due to action output to controller
+           PortModFlood: : Modify the behavior of physical port using Port Modification Messages
+       PacketInBodyMiss: : Verify the packet_in message body, 
+      FeaturesReplyBody: : (smoke) Verify the body of Features Reply message
+           EchoWithData: : Verify if OFPT_ECHO_REQUEST has data field,
+         GetConfigReply: : Verify the body of OFPT_GET_CONFIG_REPLY message
+       PacketInSizeMiss: : When packet_in is triggered due to a flow table miss,
+      PacketInSizeAction: : When the packet is sent because of a "send to controller" action, 
+        PortModPacketIn: : Modify the behavior of physical port using Port Modification Messages
+  Module         basic: Basic protocol and dataplane test cases
+           FlowStatsGet: : Get stats 
+      PacketInBroadcastCheck: : Check if bcast pkts leak when no flows are present
+           DescStatsGet: : Get stats 
+            PacketOutMC: : Test packet out to multiple output ports
+              PacketOut: : (smoke) Test packet out function
+       PortConfigModErr: : Modify a bit in port config on an invalid port and verify
+                   Echo: : (smoke) Test echo response with no data
+          PortConfigMod: : (smoke) Modify a bit in port config and verify changed
+                FlowMod: : Insert a flow
+          TableStatsGet: : Get table stats 
+             BadMessage: : (smoke) Send a message with a bad type and verify an error is returned
+           EchoWithData: : Test echo response with short string data
+         TableModConfig: : (1.1,1.2,1.3) (smoke) Simple table modification
+               PacketIn: : (smoke) Test packet in function
+  Module nicira_dec_ttl: No description
+        *  TtlDecrement: : No description
+   *  TtlDecrementZeroTtl: : No description
+  Module    flow_query: Flow query test case.
+             Flow_Del_4: : Test FLOW_DEL_4 from draft top-half test plan
+             Flow_Add_8: : Test FLOW_ADD_8 from draft top-half test plan
+        *  Flow_Add_5_1: : Test FLOW_ADD_5.1 from draft top-half test plan
+             Flow_Del_2: : Test FLOW_DEL_2 from draft top-half test plan
+             Flow_Add_7: : Test FLOW_ADD_7 from draft top-half test plan
+          *  Flow_Add_6: : Test FLOW_ADD_6 from draft top-half test plan
+             Flow_Add_5: : Test FLOW_ADD_5 from draft top-half test plan
+           Flow_Mod_3_1: : Test FLOW_MOD_3_1 from draft top-half test plan
+             Flow_Del_1: : Test FLOW_DEL_1 from draft top-half test plan
+             Flow_Mod_2: : Test FLOW_MOD_2 from draft top-half test plan
+             Flow_Mod_3: : Test FLOW_MOD_3 from draft top-half test plan
+             Flow_Mod_1: : Test FLOW_MOD_1 from draft top-half test plan
+  Module      counters: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+             RxFrameErr: : Verify that rx_frm_err counters in the Port_Stats reply increments in accordance with the number of frame alignment errors
+            ActiveCount: : Verify that active_count counter in the Table_Stats reply , increments in accordance with the flows inserted in a table
+                RxDrops: : Verify that rx_dropped counters in the Port_Stats reply increments in accordance with the packets dropped by RX
+             PktPerFlow: : Verify Packet counters per flow are
+               RxCrcErr: : Verify that rx_crc_err counters in the Port_Stats reply increments in accordance with the number of crc errors
+          TxBytPerQueue: : Verify that tx_bytes in the queue_stats reply increments in accordance with the number of transmitted bytes
+               TxErrors: : Verify that Tx_errors counters in the Port_Stats reply increments in accordance with number of trasmit error
+             BytPerFlow: : Verify Byte counters per flow are
+           RxBytPerPort: : Verify that recieved bytes counter in the Port_Stats reply , increments in accordance with the bytes recieved on a port
+               RxErrors: : Verify that rx_errors counters in the Port_Stats reply increments in accordance with number of recieved error  
+        DurationPerFlow: : Verify Duration_sec and Duration_nsec counters per flow varies in accordance with the amount of 
+                TxDrops: : Verify that tx_dropped counters in the Port_Stats reply increments in accordance with the packets dropped by TX
+                 RxOErr: : Verify that rx_over_err counters in the Port_Stats reply increments in accordance with the number of with RX overrun
+             Collisions: : Verify that collisons counters in the Port_Stats reply increments in accordance with the collisions encountered by the switch
+          TxPktPerQueue: : Verify that tx_packets in the queue_stats reply increments in accordance with the number of transmitted packets
+        TxErrorPerQueue: : Verify that tx_errors in the queue_stats reply increments in accordance with the number of packets dropped due to overrun
+           RxPktPerPort: : Verify that rx_packets counter in the Port_Stats reply
+           TxBytPerPort: : Verify that trasnsmitted bytes counter in the Port_Stats reply , increments in accordance with the bytes trasmitted by a port
+           TxPktPerPort: : Verify that tx_packets counter in the Port_Stats reply , increments when packets are transmitted by a port
+      LookupMatchedCount: : Verify that lookup_count and matched_count counter in the Table_Stats reply 
+  Module openflow_protocol_messages: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+      ModifyStateModify: : Verify basic Flow Modify request is implemented
+      ConfigurationRequest: : Check basic Get Config request is implemented
+              ReadState: : Test that a basic Read state request (like flow_stats_get request) does not generate an error
+      BarrierRequestReply: : Check basic Barrier request is implemented
+              PacketOut: : Test packet out function
+      ModifyStateDelete: : Check Basic Flow Delete request is implemented
+        EchoWithoutBody: : Test basic echo-reply is implemented
+               PacketIn: : Test basic packet_in function
+        FeaturesRequest: : Verify Features_Request-Reply is implemented 
+         ModifyStateAdd: : Check basic Flow Add request is implemented
+  Module          caps: Basic capabilities and capacities tests
+       ! FillTableExact: : Fill the flow table with exact matches; can take a while
+          ! FillTableWC: : Fill the flow table with wildcard matches
+  Module  default_drop: These tests require a switch that drops packet-ins.
+   *  PacketInDefaultDrop: : Verify that packet-ins are not received.
+  Module     bsn_shell: 
+     *  BSNShellCommand: : Exercise BSN vendor extension for running a shell command on the switch
+  Module    flow_stats: Flow stats test case.
+           TwoFlowStats: : Verify flow stats are properly retrieved.
+         AggregateStats: : Verify aggregate flow stats are properly retrieved.
+         EmptyFlowStats: : Verify the switch replies to a flow stats request when
+        SingleFlowStats: : Verify flow stats are properly retrieved.
+       DeletedFlowStats: : Verify flow stats are properly returned when a flow is deleted.
+      EmptyAggregateStats: : Verify aggregate flow stats are properly retrieved when
+  Module    bsn_ipmask: 
+     *  BSNConfigIPMask: : Exercise BSN vendor extension for configuring IP source/dest match mask
+  Module detailed_contr_sw_messages: These tests fall under Conformance Test-Suite (OF-SWITCH-1.0.0 TestCases).
+      NoOverlapChecking: : Verify that without overlap check flag set, overlapping flows can be created.
+            SendFlowRem: : Check deletion of flows happens and generates messages as configured.
+      StrictVsNonstrict: : Delete and verify strict and non-strict behaviors
+        EmerFlowTimeout: : Timeout values are not allowed for emergency flows
+            IdleTimeout: : Verify that idle timeout is implemented
+        OverlapChecking: : Verify that if overlap check flag is set in the flow entry and an overlapping flow is inserted then an error 
+           ModifyAction: : A modified flow preserves counters
+            HardTimeout: : Verify that hard timeout is implemented
+            FlowTimeout: : Verify that Flow removed messages are generated as expected
+         DeleteEmerFlow: : Delete emergency flow and verify no message is generated.An emergency flow deletion will not generate flow-removed messages even if 
+               Outport2: : Add, modify flows with outport set. This field is ignored by ADD, MODIFY, and MODIFY STRICT messages.
+               Outport1: : Delete flows filtered by action outport.If the out_port field in the delete command contains a value other than OFPP_NONE,
+      DeleteNonexistingFlow: : Request deletion of non-existing flow
+      StrictModifyAction: : Strict Modify Flow also changes action preserves counters
+         IdenticalFlows: : Verify that adding two identical flows overwrites the existing one and clears counters
+       MissingModifyAdd: : If a modify does not match an existing flow, the flow gets added
+'22' modules shown with a total of '233' tests
+
+Test groups: actions, all, basic, bsn_ipmask, bsn_mirror, bsn_shell, counters, default_drop, detailed_contr_sw_messages, flow_expire, flow_matches, flow_query, flow_stats, latency, load, message_types, nicira_dec_ttl, nicira_role, openflow_protocol_messages, pktact, port_stats, smoke, standard

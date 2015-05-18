@@ -19,7 +19,7 @@ import time
 from oftest.testutils import *
 
 
-@group('basic')
+@group('TestSuite10')
 class HelloVersionAnnouncement(base_tests.SimpleProtocol):
     """
     TestCase 10.30 --> Supported version announcement
@@ -35,7 +35,7 @@ class HelloVersionAnnouncement(base_tests.SimpleProtocol):
                          "Incorrect version 0x{0:x} from HELLO message sent from switch".format(response.version))
 
 
-@group('basic')
+@group('TestSuite10')
 class HelloVersionNegotiation(base_tests.SimpleProtocol):
     """
     TestCase 10.40 --> Supported version negotiation
@@ -49,7 +49,7 @@ class HelloVersionNegotiation(base_tests.SimpleProtocol):
                          "Hello Error was received for the reason Version INCOMPATIBLE")
 
 
-@group('basic')
+@group('TestSuite10')
 class HelloVersionIncompatible(base_tests.SimpleProtocol):
     """
     TestCase 10.50 --> No common version negotiated
@@ -71,13 +71,200 @@ class HelloVersionIncompatible(base_tests.SimpleProtocol):
                         "Hello Error with reason Version INCOMPATIBLE was not received")
 
 
-@group('smoke')
+@group('TestSuite20')
+class FeaturesRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.10 --> Verify Features Request / Reply is implemented
+
+    Test features_request to make sure we get a response
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.10 --> Verify Features Request / Reply is implemented")
+        request = ofp.message.features_request()
+        response, _ = self.controller.transact(request)
+        self.assertTrue(response is not None,
+                        'Did not get features reply')
+
+
+@group('TestSuite20')
+class ConfigGet(base_tests.SimpleProtocol):
+    """
+    Test case 20.20: Verify basic Config Request is implemented
+
+    Verify that a basic Get Config Request does not generate an error.    """
+
+    def runTest(self):
+        logging.info("Test case 20.20: Verify basic Config Request is implemented")
+        request = ofp.message.get_config_request()
+        response, _ = self.controller.transact(request)
+        logging.info(response.show())
+        self.assertTrue(response is not None,
+                        "No response to get config request")
+
+
+@group('TestSuite20')
+class FlowAddRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.30: Verify basic Modify state Add message is implemented
+
+    Verify that a basic Flow ADD request does not generate an error.
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.30: Verify basic Modify state Add message is implemented")
+        request = ofp.message.flow_add()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+        response, _ = self.controller.poll(ofp.OFPT_ERROR)
+        self.assertTrue(response is None,
+                        "Error message was received")
+
+
+@group('TestSuite20')
+class FlowDeleteRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.40: Verify basic Modify state Delete message is implemented
+
+    Verify that a basic Flow Delete request does not generate an error.
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.40: Verify basic Modify state Delete message is implemented")
+        request = ofp.message.flow_delete()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+        response, _ = self.controller.poll(ofp.OFPT_ERROR)
+        self.assertTrue(response is None,
+                        "Error message was received")
+
+@group('TestSuite20')
+class FlowModifyRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.50: Verify basic Modify Flow Modify message is implemented
+
+    Verify that a basic Modify State Modify request does not generate an error.
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.50: Verify basic Modify Flow Modify message is implemented")
+        request = ofp.message.flow_modify()
+        self.controller.message_send(request)
+        # send Barrier Message to check errors
+        do_barrier(self.controller)
+
+        response, _ = self.controller.poll(ofp.OFPT_ERROR)
+        self.assertTrue(response is None,
+                        "Error message was received")
+
+
+@group('TestSuite20')
+class PacketOut(base_tests.SimpleDataPlane):
+    """
+    Test case 20.70: Verify basic send packet is implemented
+    Test packet out function
+
+    Send packet out message to controller for each dataplane port and
+    verify the packet appears on the appropriate dataplane port
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.70: Verify basic send packet is implemented")
+        pkt = str(simple_tcp_packet())
+
+        for of_port in config["port_map"].keys():
+            msg = ofp.message.packet_out(
+                in_port=ofp.OFPP_CONTROLLER,
+                actions=[ofp.action.output(port=of_port)],
+                buffer_id=ofp.OFP_NO_BUFFER,
+                data=pkt)
+
+            logging.info("PacketOut test, port %d", of_port)
+            self.controller.message_send(msg)
+            verify_packets(self, pkt, [of_port])
+
+
+@group('TestSuite20')
+class BarrierRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.80: Verify basic barrier request-reply is implemented
+
+    Verify that a basic barrier request does not generate an error.
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.80: Verify basic barrier request-reply is implemented")
+        request = ofp.message.barrier_request()
+        response, _ = self.controller.transact(request)
+        self.assertTrue(response is not None,
+                        "No response to Barrier Request")
+
+@group('TestSuite20')
+class PacketInMiss(base_tests.SimpleDataPlane):
+    """
+    Test case 20.90: Packet_in generation
+
+    Test packet in function for a table-miss flow
+    Send a packet to each dataplane port and verify that a packet
+    in message is received from the controller for each
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.90: Packet_in generation")
+        delete_all_flows(self.controller)
+
+        parsed_pkt = simple_tcp_packet()
+        pkt = str(parsed_pkt)
+
+        request = ofp.message.flow_add(
+            table_id=test_param_get("table", 3),
+            instructions=[
+                ofp.instruction.apply_actions(
+                    actions=[
+                        ofp.action.output(
+                            port=ofp.OFPP_CONTROLLER,
+                            max_len=ofp.OFPCML_NO_BUFFER)])],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=0)
+
+        logging.info("Inserting table-miss flow sending all packets to controller")
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        for of_port in config["port_map"].keys():
+            logging.info("PacketInMiss test, port %d", of_port)
+            self.dataplane.send(of_port, pkt)
+            verify_packet_in(self, pkt, of_port, ofp.OFPR_NO_MATCH)
+            # verify_packets(self, pkt, []) ensures no packets are received from other ports
+            verify_packets(self, pkt, [])
+
+
+@group('TestSuite20')
+class HelloRequest(base_tests.SimpleProtocol):
+    """
+    Test case 20.100: Verify basic Hello messages are implemented
+
+    Verify basic Hello message generation with correct version field
+    """
+
+    def runTest(self):
+        logging.info("Test case 20.100: Verify basic Hello messages are implemented")
+        request = ofp.message.hello()
+        self.controller.message_send(request)
+
+@group('TestSuite20')
 class Echo(base_tests.SimpleProtocol):
     """
+    Test case 20.110: Verify Echo Reply messages are implemented
     Test echo response with no data
     """
 
     def runTest(self):
+        logging.info("Test case 20.110: Verify Echo Reply messages are implemented")
         request = ofp.message.echo_request()
         response, pkt = self.controller.transact(request)
         self.assertTrue(response is not None,
@@ -89,6 +276,7 @@ class Echo(base_tests.SimpleProtocol):
         self.assertEqual(len(response.data), 0, 'response data non-empty')
 
 
+@group('OFTest')
 class EchoWithData(base_tests.SimpleProtocol):
     """
     Test echo response with short string data
@@ -107,19 +295,6 @@ class EchoWithData(base_tests.SimpleProtocol):
         self.assertEqual(request.data, response.data,
                          'response data != request data')
 
-
-class FeaturesRequest(base_tests.SimpleProtocol):
-    """
-    Test features_request to make sure we get a response
-
-    Does NOT test the contents; just that we get a response
-    """
-
-    def runTest(self):
-        request = ofp.message.features_request()
-        response, _ = self.controller.transact(request)
-        self.assertTrue(response is not None,
-                        'Did not get features reply')
 
 
 class DefaultDrop(base_tests.SimpleDataPlane):
@@ -297,65 +472,8 @@ class PacketInWildcard(base_tests.SimpleDataPlane):
             verify_packets(self, pkt, [])
 
 
-class PacketInMiss(base_tests.SimpleDataPlane):
-    """
-    Test packet in function for a table-miss flow
-
-    Send a packet to each dataplane port and verify that a packet
-    in message is received from the controller for each
-    """
-
-    def runTest(self):
-        delete_all_flows(self.controller)
-
-        parsed_pkt = simple_tcp_packet()
-        pkt = str(parsed_pkt)
-
-        request = ofp.message.flow_add(
-            table_id=test_param_get("table", 0),
-            cookie=42,
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=0)
-
-        logging.info("Inserting table-miss flow sending all packets to controller")
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        for of_port in config["port_map"].keys():
-            logging.info("PacketInMiss test, port %d", of_port)
-            self.dataplane.send(of_port, pkt)
-            verify_packet_in(self, pkt, of_port, ofp.OFPR_NO_MATCH)
-            # verify_packets(self, pkt, []) ensures no packets are received from other ports
-            verify_packets(self, pkt, [])
 
 
-class PacketOut(base_tests.SimpleDataPlane):
-    """
-    Test packet out function
-
-    Send packet out message to controller for each dataplane port and
-    verify the packet appears on the appropriate dataplane port
-    """
-
-    def runTest(self):
-        pkt = str(simple_tcp_packet())
-
-        for of_port in config["port_map"].keys():
-            msg = ofp.message.packet_out(
-                in_port=ofp.OFPP_CONTROLLER,
-                actions=[ofp.action.output(port=of_port)],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                data=pkt)
-
-            logging.info("PacketOut test, port %d", of_port)
-            self.controller.message_send(msg)
-            verify_packets(self, pkt, [of_port])
 
 
 class FlowRemoveAll(base_tests.SimpleProtocol):
@@ -670,81 +788,4 @@ class AsyncConfigGet(base_tests.SimpleProtocol):
         self.assertEquals(response.flow_removed_mask_equal_master & 0x0f, 0x0f)
 
 
-class ConfigGet(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Get Config Request")
-        request = ofp.message.get_config_request()
-        response, _ = self.controller.transact(request)
-        logging.info(response.show())
-        self.assertTrue(response is not None,
-                        "No response to get config request")
-
-
-class FlowAddRequest(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Flow Add Request")
-        request = ofp.message.flow_add()
-        self.controller.message_send(request)
-        # send Barrier Message to check errors
-        do_barrier(self.controller)
-
-
-class FlowDeleteRequest(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Flow Delete Request")
-        request = ofp.message.flow_delete()
-        self.controller.message_send(request)
-        # send Barrier Message to check errors
-        do_barrier(self.controller)
-
-
-class FlowModifyRequest(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Flow Modify Request")
-        request = ofp.message.flow_modify()
-        self.controller.message_send(request)
-        # send Barrier Message to check errors
-        do_barrier(self.controller)
-
-
-class BarrierRequest(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Barrier Request")
-        request = ofp.message.barrier_request()
-        response, _ = self.controller.transact(request)
-        self.assertTrue(response is not None,
-                        "No response to Barrier Request")
-
-
-class Hello(base_tests.SimpleProtocol):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Sending Hello")
-        request = ofp.message.hello()
-        request.version = 3
-        self.controller.message_send(request)
-        time.sleep(1)
 
