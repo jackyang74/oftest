@@ -28,21 +28,21 @@ class HelloVersionAnnouncement(base_tests.SimpleProtocol):
         self.assertTrue(config is not None, "Did not get port config")
 
         rv = port_config_set(self.controller, of_port,
-                             config1 ^ ofp.OFPPC_NO_PACKET_IN,
-                             ofp.OFPPC_NO_PACKET_IN)
+                             config1 ^ ofp.OFPPC_PORT_DOWN,
+                             ofp.OFPPC_PORT_DOWN)
         self.assertTrue(rv != -1, "Error sending port mod")
 
         # Verify change took place with same feature request
         (_, config2, _) = port_config_get(self.controller, of_port)
         self.assertTrue(config2 is not None, "Did not get port config2")
-        logging.debug("OFPPC_NO_PACKET_IN bit port " + str(of_port) + " is now " +
-                      str(config2 & ofp.OFPPC_NO_PACKET_IN))
-        self.assertTrue(config2 & ofp.OFPPC_NO_PACKET_IN !=
-                        config1 & ofp.OFPPC_NO_PACKET_IN,
+        logging.debug("OFPPC_PORT_DOWN bit port " + str(of_port) + " is now " +
+                      str(config2 & ofp.OFPPC_PORT_DOWN))
+        self.assertTrue(config2 & ofp.OFPPC_PORT_DOWN !=
+                        config1 & ofp.OFPPC_PORT_DOWN,
                         "Bit change did not take")
         # Set it back
-        rv = port_config_set(self.controller, of_port, config1,
-                             ofp.OFPPC_NO_PACKET_IN)
-        self.assertTrue(rv != -1, "Error sending port mod")
+        # rv = port_config_set(self.controller, of_port, config1,
+        #                      ofp.OFPPC_NO_PACKET_IN)
+        # self.assertTrue(rv != -1, "Error sending port mod")
 
 
