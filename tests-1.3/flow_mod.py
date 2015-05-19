@@ -15,6 +15,7 @@ from loxi.pp import pp
 import oftest.testutils as testutils
 from oftest.parse import parse_ipv6
 
+
 class Overwrite(base_tests.SimpleDataPlane):
     """
     Verify that overwriting a flow changes most fields but preserves stats
@@ -87,6 +88,7 @@ class Overwrite(base_tests.SimpleDataPlane):
 
         # Flow stats should have been preserved
         verify_flow_stats(self, ofp.match(), table_id=table_id, pkts=1)
+
 
 @testutils.group('TestSuite40')
 class OverlapChecking(base_tests.SimpleProtocol):
@@ -185,14 +187,14 @@ class NoOverlapChecking(base_tests.SimpleProtocol):
         self.assertTrue(response is None,
                         "Flow Mod Failed Error message was received")
 
-        #read flow entries to ensure the new entry is inserted
+        # read flow entries to ensure the new entry is inserted
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 2)
         for entry in flow_stats:
             logging.debug(entry.show())
 
-        self.assertTrue(request1.instructions,flow_stats[0].instructions)
-        self.assertTrue(request2.instructions,flow_stats[1].instructions)
+        self.assertTrue(request1.instructions, flow_stats[0].instructions)
+        self.assertTrue(request2.instructions, flow_stats[1].instructions)
 
 
 @testutils.group('TestSuite40')
@@ -205,11 +207,13 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
 
     def runTest(self):
         logging.info("Test case 40.30: Identical flows")
-        in_port, out_port = openflow_ports(2)
+        in_port, out_port = testutils.openflow_ports(2)
         # delete all entries
         testutils.delete_all_flows(self.controller)
 
-        logging.info("Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port=2 apply:output=1")
+        logging.info(
+            "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
+            " apply:output={1}".format(in_port, out_port))
         table_id = testutils.test_param_get("table", 0)
         request = ofp.message.flow_add(
             table_id=table_id,
@@ -224,18 +228,88 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #send matching packets
-        pkt =str(testutils.simple_tcp_packet())
+        # send matching packets
+        pkt = str(testutils.simple_icmp_packet())
         times = 10
         for i in range(10):
-            self.dataplane.send(in_port,pkt)
+            self.dataplane.send(in_port, pkt)
         flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(flow_stats[0].packet_count, times)
-        #read flow entries to ensure the new entry is inserted
-        flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(len(flow_stats), 2)
         for entry in flow_stats:
             logging.debug(entry.show())
+        self.assertEqual(len(flow_stats), 1)
+        self.assertEqual(flow_stats[0].packet_count, times)
 
+@testutils.group('TestSuite40')
+class NoTableAdd(base_tests.SimpleProtocol):
+    """
+    Test case 40.40: No table to add
+    Verify that flow table full error messages are generated.
+    """
 
+    def runTest(self):
+        logging.info("Test case 40.40: No table to add")
+        # delete all entries
+        testutils.delete_all_flows(self.controller)
+        in_port, out_port = testutils.openflow_ports(2)
+
+        logging.info(
+            "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
+            " apply:output={1}".format(in_port, out_port))
+        for i in range(15):
+            table_id = testutils.test_param_get("table", 0)
+            request = ofp.message.flow_add(
+                table_id=table_id,
+                match=ofp.match([ofp.oxm.in_port(in_port)]),
+                instructions=[
+                    ofp.instruction.apply_actions([ofp.action.output(out_port)]),
+                ],
+                buffer_id=ofp.OFP_NO_BUFFER,
+                out_port=ofp.OFPP_ANY,
+                out_group=ofp.OFPG_ANY,
+                priority=i)
+            self.controller.message_send(request)
+            testutils.do_barrier(self.controller)
+
+        # read error message
+        response, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
+        self.assertTrue(response is not None,
+                        "No error message was received")
+        self.assertEqual(response.code,ofp.OFPFMFC_TABLE_FULL)
+
+@testutils.group('TestSuite40')
+class NeverValidOutputPort(base_tests.SimpleProtocol):
+    """
+    Test case 40.40: No table to add
+    Verify that flow table full error messages are generated.
+    """
+
+    def runTest(self):
+        logging.info("Test case 40.40: No table to add")
+        # delete all entries
+        testutils.delete_all_flows(self.controller)
+        in_port, out_port = testutils.openflow_ports(2)
+
+        logging.info(
+            "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
+            " apply:output={1}".format(in_port, out_port))
+        for i in range(15):
+            table_id = testutils.test_param_get("table", 0)
+            request = ofp.message.flow_add(
+                table_id=table_id,
+                match=ofp.match([ofp.oxm.in_port(in_port)]),
+                instructions=[
+                    ofp.instruction.apply_actions([ofp.action.output(out_port)]),
+                ],
+                buffer_id=ofp.OFP_NO_BUFFER,
+                out_port=ofp.OFPP_ANY,
+                out_group=ofp.OFPG_ANY,
+                priority=i)
+            self.controller.message_send(request)
+            testutils.do_barrier(self.controller)
+
+        # read error message
+        response, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
+        self.assertTrue(response is not None,
+                        "No error message was received")
+        self.assertEqual(response.code,ofp.OFPFMFC_TABLE_FULL)
 

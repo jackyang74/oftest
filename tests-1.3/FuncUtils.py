@@ -1,4 +1,4 @@
-""" Defined Some common functions used by Conformance tests -- OF-SWITCH 1.0.1 Testcases """
+""" Defined Some common functions used by Conformance tests -- OF-SWITCH 1.0.0 Testcases """
 
 import sys
 import copy
@@ -27,7 +27,7 @@ def match_send_flowadd(self, match, priority, port):
         msg.priority = priority
     act = ofp.action.output()
     act.port = port 
-    msg.actions.append(act)
+    msg.instructions.append(act)
     self.controller.message_send(msg)
     do_barrier(self.controller)
 
@@ -97,27 +97,13 @@ def match_ethernet_dst_address(self,of_ports,priority=None):
 def wildcard_all(self,of_ports,priority=None):
 # Generate a Wildcard_All Flow 
 
-    #Create a simple tcp packet and generate wildcard all flow match from it.
-    logging.info("Inserting flow")
-    request = ofp.message.flow_add(
-                table_id=table_id,
-                match=match,
-                instructions=[
-                    ofp.instruction.apply_actions([ofp.action.output(out_port1)]),
-                ],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=priority,
-                flags=ofp.OFPFF_SEND_FLOW_REM,
-                cookie=0x1234,
-                hard_timeout=1000,
-                idle_timeout=2000)
-    self.controller.message_send(request)
-    do_barrier(self.controller)
+    #Create a simple tcp packet and generate wildcard all flow match from it.  
     pkt_wildcard = simple_tcp_packet()
     match2 = parse.packet_to_flow_match(pkt_wildcard)
     self.assertTrue(match2 is not None, "Could not generate flow match from pkt")
+    match2.wildcards=(1<<20)-1
     match2.in_port = of_ports[0]
-
+    match_send_flowadd(self, match2, priority, of_ports[1])
     return (pkt_wildcard,match2)
 
 def wildcard_all_except_ingress(self,of_ports,priority=None):
