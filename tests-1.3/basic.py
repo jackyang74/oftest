@@ -220,6 +220,7 @@ class PacketInMiss(base_tests.SimpleDataPlane):
         parsed_pkt = simple_tcp_packet()
         pkt = str(parsed_pkt)
 
+        logging.info("Inserting table-miss flow sending all packets to controller")
         request = ofp.message.flow_add(
             table_id=test_param_get("table", 3),
             instructions=[
@@ -231,7 +232,6 @@ class PacketInMiss(base_tests.SimpleDataPlane):
             buffer_id=ofp.OFP_NO_BUFFER,
             priority=0)
 
-        logging.info("Inserting table-miss flow sending all packets to controller")
         self.controller.message_send(request)
         do_barrier(self.controller)
 

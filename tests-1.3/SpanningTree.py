@@ -41,8 +41,8 @@ class PortDown(base_tests.SimpleProtocol):
                         config1 & ofp.OFPPC_PORT_DOWN,
                         "Bit change did not take")
         # Set it back
-        # rv = port_config_set(self.controller, of_port, config1,
-        #                      ofp.OFPPC_NO_PACKET_IN)
-        # self.assertTrue(rv != -1, "Error sending port mod")
+        rv = port_config_set(self.controller, of_port, config1,
+                             ofp.OFPPC_NO_PACKET_IN)
+        self.assertTrue(rv != -1, "Error sending port mod")
 
 
