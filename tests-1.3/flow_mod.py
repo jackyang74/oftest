@@ -229,7 +229,8 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
         times = 10
         for i in range(10):
             self.dataplane.send(in_port,pkt)
-        
+        flow_stats = testutils.get_flow_stats(self, ofp.match())
+        self.assertEqual(flow_stats[0].packet_count, times)
         #read flow entries to ensure the new entry is inserted
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 2)
