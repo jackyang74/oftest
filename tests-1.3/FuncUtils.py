@@ -12,7 +12,7 @@ import logging
 import types
 
 import oftest.base_tests as base_tests
-from oftest.testutils import *
+import oftest.testutils as testutils
 from time import sleep
 
 #################### Functions for various types of flow_mod  ##########################################################################################
@@ -552,23 +552,11 @@ def nonstrict_delete(self,match,priority=None):
 
 ###########################################################################################################################################################
 
-def send_packet(obj, pkt, ingress_port, egress_port):
-#Send Packets on a specified ingress_port and verify if its recieved on correct egress_port.
+def send_packets(obj, pkt, ingress_port, num):
+#Send Packets on a specified ingress_port
 
-    obj.dataplane.send(ingress_port, str(pkt))
-    exp_pkt_arg = pkt
-    exp_port = egress_port
-
-    (rcv_port, rcv_pkt, pkt_time) = obj.dataplane.poll(timeout=2, 
-                                                       port_number=exp_port,
-                                                       exp_pkt=exp_pkt_arg)
-    obj.assertTrue(rcv_pkt is not None,
-                   "Packet not received on port " + str(egress_port))
-    obj.assertEqual(rcv_port, egress_port,
-                    "Packet received on port " + str(rcv_port) +
-                    ", expected port " + str(egress_port))
-    obj.assertEqual(str(pkt), str(rcv_pkt),
-                    'Response packet does not match send packet')
+    for i in range(num):
+        obj.dataplane.send(ingress_port, str(pkt))
 
 
 def sw_supported_actions(parent,use_cache=False):
@@ -583,4 +571,27 @@ def sw_supported_actions(parent,use_cache=False):
     return cache_supported_actions
 
 ##############################################################################################################################################################
+
+def add_simple_flow(self,table_id=0, in_port=None,out_port=None,priority=15,flags=0):
+    #add simple entry that forward data from in_port to out_port
+    match_req = None
+    instruction_req = None
+    if in_port != None:
+        match_req =ofp.match([ofp.oxm.in_port(in_port)])
+    if out_port is not None:
+        instruction_req=[ofp.instruction.apply_actions([ofp.action.output(out_port)])]
+
+
+    request = ofp.message.flow_add(
+        table_id=table_id,
+        match= match_req,
+        instructions= instruction_req,
+        buffer_id=ofp.OFP_NO_BUFFER,
+        out_port=ofp.OFPP_ANY,
+        out_group=ofp.OFPG_ANY,
+        priority=priority,
+        flags = flags
+    )
+    self.controller.message_send(request)
+    testutils.do_barrier(self.controller)
 
