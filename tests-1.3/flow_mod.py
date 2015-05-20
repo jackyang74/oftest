@@ -16,6 +16,7 @@ import oftest.testutils as testutils
 from oftest.parse import parse_ipv6
 import FuncUtils
 
+
 class Overwrite(base_tests.SimpleDataPlane):
     """
     Verify that overwriting a flow changes most fields but preserves stats
@@ -239,6 +240,7 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
         self.assertEqual(len(flow_stats), 1)
         self.assertEqual(flow_stats[0].packet_count, times)
 
+
 @testutils.group('TestSuite40')
 class NoTableAdd(base_tests.SimpleProtocol):
     """
@@ -274,7 +276,8 @@ class NoTableAdd(base_tests.SimpleProtocol):
         response, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
         self.assertTrue(response is not None,
                         "No error message was received")
-        self.assertEqual(response.code,ofp.OFPFMFC_TABLE_FULL)
+        self.assertEqual(response.code, ofp.OFPFMFC_TABLE_FULL)
+
 
 @testutils.group('TestSuite40')
 class NeverValidOutputPort(base_tests.SimpleProtocol):
@@ -288,15 +291,16 @@ class NeverValidOutputPort(base_tests.SimpleProtocol):
         logging.info("Test case 40.50: Never valid output port")
         # delete all entries
         testutils.delete_all_flows(self.controller)
-        #serach unavalible port
+        # serach unavalible port
+        port_nonvalid = 0
         for port_nonvalid in range(30):
-            _, port_config,_= testutils.port_config_get(self.controller, port_num)
-            if(port_config == None):
+            _, port_config, _ = testutils.port_config_get(self.controller, port_nonvalid)
+            print(port_config)
+            if port_config is None:
                 break
-
         logging.info(
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 "
-            "apply:output={1}".format(port_nonvalid))
+            "apply:output={}".format(port_nonvalid))
 
         table_id = testutils.test_param_get("table", 0)
         request = ofp.message.flow_add(
@@ -316,7 +320,8 @@ class NeverValidOutputPort(base_tests.SimpleProtocol):
         response, _ = self.controller.poll(ofp.message.bad_action_error_msg)
         self.assertTrue(response is not None,
                         "No error message was received")
-        self.assertEqual(response.code,ofp.OFPBAC_BAD_OUT_PORT)
+        self.assertEqual(response.code, ofp.OFPBAC_BAD_OUT_PORT)
+
 
 @testutils.group('TestSuite40')
 class ModifyNonExistentFlow(base_tests.SimpleProtocol):
@@ -335,8 +340,8 @@ class ModifyNonExistentFlow(base_tests.SimpleProtocol):
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
-        table_id = testutils.test_param_get("table", 0)
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        table_id = 0
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_modify(
             table_id=table_id,
             match=match_req,
@@ -352,10 +357,9 @@ class ModifyNonExistentFlow(base_tests.SimpleProtocol):
 
         # verilog the flow entry was added and its counter was 0
         flow_stats = testutils.get_flow_stats(self, ofp.match())
-        for entry in flow_stats:
-            logging.debug(entry.show())
-        self.assertEqual(len(flow_stats), 1)
+        self.assertEqual(len(flow_stats), 0)
         testutils.verify_flow_stats(self, match_req, pkts=0)
+
 
 @testutils.group('TestSuite40')
 class ModifyAction(base_tests.SimpleDataPlane):
@@ -374,7 +378,7 @@ class ModifyAction(base_tests.SimpleDataPlane):
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port1))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_add(
             table_id=table_id,
             match=match_req,
@@ -388,16 +392,15 @@ class ModifyAction(base_tests.SimpleDataPlane):
         )
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
-
         pkg_num = 10
-        FuncUtils.send_packets(self,testutils.simple_icmp_packet(),in_port,pkg_num)
+        FuncUtils.send_packets(self, testutils.simple_icmp_packet(), in_port, pkg_num)
 
         # modify the flow
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port2))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_modify(
             table_id=table_id,
             match=match_req,
@@ -408,10 +411,11 @@ class ModifyAction(base_tests.SimpleDataPlane):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #verify flow entry pkg num
+        # verify flow entry pkg num
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 1)
         testutils.verify_flow_stats(self, match_req, pkts=pkg_num)
+
 
 @testutils.group('TestSuite40')
 class ModifyStrictAction(base_tests.SimpleDataPlane):
@@ -431,7 +435,7 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port1))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_add(
             table_id=table_id,
             match=match_req,
@@ -447,14 +451,14 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
         testutils.do_barrier(self.controller)
 
         pkg_num = 10
-        FuncUtils.send_packets(self,testutils.simple_icmp_packet(),in_port,pkg_num)
+        FuncUtils.send_packets(self, testutils.simple_icmp_packet(), in_port, pkg_num)
 
         # modify the flow
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port2))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_modify_strict(
             table_id=table_id,
             match=match_req,
@@ -465,7 +469,7 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #verify flow entry pkg num
+        # verify flow entry pkg num
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 1)
         testutils.verify_flow_stats(self, match_req, pkts=pkg_num)
@@ -488,7 +492,7 @@ class DeleteNonexistentFlow(base_tests.SimpleProtocol):
             "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
         request = ofp.message.flow_delete(
             table_id=table_id,
             match=match_req,
@@ -503,14 +507,14 @@ class DeleteNonexistentFlow(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        error_msg,_ = self.controller.poll(ofp.OFPT_ERROR)
-        self.assertTrue(error_msg is None,"Error message was received")
+        error_msg, _ = self.controller.poll(ofp.OFPT_ERROR)
+        self.assertTrue(error_msg is None, "Error message was received")
 
 
 @testutils.group('TestSuite40')
 class DeleteFlowWithFlag(base_tests.SimpleProtocol):
     """
-    Test case 40.110: Delete non-existent flow
+    Test case 40.120: Delete non-existent flow
     Verify that deleting a non-existent flow does not generate an error
     """
 
@@ -524,8 +528,8 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
             "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
         table_id = 0
-        match_req =ofp.match([ofp.oxm.in_port(in_port)]),
-        request = ofp.message.flow_delete(
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
+        request = ofp.message.flow_add(
             table_id=table_id,
             match=match_req,
             instructions=[
@@ -539,8 +543,26 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        error_msg,_ = self.controller.poll(ofp.OFPT_ERROR)
-        self.assertTrue(error_msg is None,"Error message was received")
+        logging.info(
+            "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0} flags=OFPFF_SEND_FLOW_REM"
+            " apply:output={1}".format(in_port, out_port))
+        table_id = 0
+        match_req = ofp.match([ofp.oxm.in_port(in_port)])
+        request = ofp.message.flow_add(
+            table_id=table_id,
+            match=match_req,
+            instructions=[
+                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
+            ],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            out_port=ofp.OFPP_ANY,
+            out_group=ofp.OFPG_ANY,
+            flags=ofp.OFPFF_SEND_FLOW_REM,
+            priority=15
+        )
+        self.controller.message_send(request)
+        testutils.do_barrier(self.controller)
 
-
-
+        testutils.delete_all_flows(self.controller)
+        error_msg, _ = self.controller.poll(ofp.message.flow_removed)
+        self.assertTrue(error_msg is not None, "Error message was received")
