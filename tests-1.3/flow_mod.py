@@ -154,32 +154,11 @@ class NoOverlapChecking(base_tests.SimpleProtocol):
         testutils.delete_all_flows(self.controller)
 
         logging.info("Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port=2 apply:output=1")
-        request1 = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd=add,table=0,prio=15 in_port=2 apply:output=1")
-        # table_id = testutils.test_param_get("table", 0)
-        # request1 = ofp.message.flow_add(
-        #     table_id=table_id,
-        #     match=ofp.match([ofp.oxm.in_port(2)]),
-        #     instructions=[
-        #         ofp.instruction.apply_actions([ofp.action.output(1)]),
-        #     ],
-        #     buffer_id=ofp.OFP_NO_BUFFER,
-        #     out_port=ofp.OFPP_ANY,
-        #     out_group=ofp.OFPG_ANY,
-        #     priority=15)
+        request1 = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port=2 apply:output=1")
         self.controller.message_send(request1)
 
         logging.info("Inserting flow:  flow-mod cmd=add,table=0,prio=15,flags=0x2 apply:output=1")
-        table_id = testutils.test_param_get("table", 0)
-        request2 = ofp.message.flow_add(
-            table_id=table_id,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(1)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            # flags=ofp.OFPFF_CHECK_OVERLAP,
-            priority=15)
+        request2 = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15,flags=0x2 apply:output=1")
         self.controller.message_send(request2)
 
         testutils.do_barrier(self.controller)
@@ -216,17 +195,8 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
         logging.info(
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
-        table_id = testutils.test_param_get("table", 0)
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=ofp.match([ofp.oxm.in_port(in_port)]),
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "in_port={0} apply:output={1}".format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -259,22 +229,13 @@ class NoTableAdd(base_tests.SimpleProtocol):
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
         for i in range(15):
-            table_id = testutils.test_param_get("table", 0)
-            request = ofp.message.flow_add(
-                table_id=table_id,
-                match=ofp.match([ofp.oxm.in_port(in_port)]),
-                instructions=[
-                    ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-                ],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                out_port=ofp.OFPP_ANY,
-                out_group=ofp.OFPG_ANY,
-                priority=i)
+            request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio={} "
+                                                 "in_port={} apply:output={}".format(i, in_port, out_port))
             self.controller.message_send(request)
             testutils.do_barrier(self.controller)
 
         # read error message
-        response, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
+        request, _, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
         self.assertTrue(response is not None,
                         "No error message was received")
         self.assertEqual(response.code, ofp.OFPFMFC_TABLE_FULL)
@@ -299,21 +260,9 @@ class NeverValidOutputPort(base_tests.SimpleProtocol):
             print(port_config)
             if port_config is None:
                 break
-        logging.info(
-            "Inserting flow: flow-mod cmd=add,table=0,prio=15 "
-            "apply:output={}".format(port_nonvalid))
-
-        table_id = testutils.test_param_get("table", 0)
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(port_nonvalid)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15,
-        )
+        logging.info("Inserting flow: flow-mod cmd=add,table=0,prio=15 apply:output={}".format(port_nonvalid))
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg(
+            "flow-mod cmd='add',table=0,prio=15 apply:output={}".format(port_nonvalid))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -341,18 +290,8 @@ class ModifyNonExistentFlow(base_tests.SimpleProtocol):
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_modify(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15)
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='mod',table=0,prio=15 in_port={0}"
+                                                           " apply:output={1}".format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -378,19 +317,8 @@ class ModifyAction(base_tests.SimpleDataPlane):
         logging.info(
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port1))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port1)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={0}"
+                                                           " apply:output={1}".format(in_port, out_port1))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
         pkg_num = 10
@@ -400,15 +328,8 @@ class ModifyAction(base_tests.SimpleDataPlane):
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port2))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_modify(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port2)]),
-            ],
-        )
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='mod',table=0,prio=15 in_port={0}"
+                                                           " apply:output={1}".format(in_port, out_port2))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -435,19 +356,8 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
         logging.info(
             "Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port1))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port1)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={0}"
+                                                           " apply:output={1}".format(in_port, out_port1))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -458,15 +368,8 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
         logging.info(
             "Inserting flow: flow-mod cmd=mod,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port2))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_modify_strict(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port2)]),
-            ],
-        )
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='mod',table=0,prio=15 in_port={0}"
+                                                           " apply:output={1}".format(in_port, out_port2))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -492,19 +395,8 @@ class DeleteNonexistentFlow(base_tests.SimpleProtocol):
         logging.info(
             "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_delete(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={0}"
+                                                   " apply:output={1}".format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -516,7 +408,9 @@ class DeleteNonexistentFlow(base_tests.SimpleProtocol):
 class DeleteFlowWithFlag(base_tests.SimpleProtocol):
     """
     Test case 40.120: Delete non-existent flow
-    Verify that deleting a non-existent flow does not generate an error
+    Verify that deleting a flow with send flow removed flag set triggers a
+    flow removed message, and deleting a flow without the send flow
+    removed flag set does not trigger a flow removed message.
     """
 
     def runTest(self):
@@ -528,41 +422,15 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
         logging.info(
             "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0}"
             " apply:output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={0}"
+                                                   " apply:output={1}".format(in_port, out_port))
         self.controller.message_send(request)
-        testutils.do_barrier(self.controller)
 
-        logging.info(
-            "Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port={0} flags=OFPFF_SEND_FLOW_REM"
-            " apply:output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            flags=ofp.OFPFF_SEND_FLOW_REM,
-            priority=15
-        )
+        # Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port=0 flags=OFPFF_SEND_FLOW_REM apply:output=2
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15,flags={} in_port={}"
+                                                   " apply:output={}".format( ofp.OFPFF_SEND_FLOW_REM,in_port,
+                                                                             out_port))
         self.controller.message_send(request)
-        testutils.do_barrier(self.controller)
 
         testutils.delete_all_flows(self.controller)
         error_msg, _ = self.controller.poll(ofp.message.flow_removed)
@@ -619,7 +487,7 @@ class DeleteWithoutWildcards(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #verify the num of flow entry is 1
+        # verify the num of flow entry is 1
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 0)
 
@@ -660,7 +528,7 @@ class DeleteWithoutWildcards(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #verify the num of flow entry is 1
+        # verify the num of flow entry is 1
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 0)
 
@@ -734,7 +602,7 @@ class DeleteWithWildcardsSet(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier()
 
-        #verify the num of flow entry is 0
+        # verify the num of flow entry is 0
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 0)
 
@@ -808,8 +676,6 @@ class StrictDeleteWithWildcardsSet(base_tests.SimpleProtocol):
         self.controller.message_send(request)
         testutils.do_barrier()
 
-        #verify the num of flow entry is 0
+        # verify the num of flow entry is 0
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 0)
-
-

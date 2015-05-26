@@ -596,11 +596,12 @@ def add_simple_flow(self,table_id=0, in_port=None,out_port=None,priority=15,flag
     testutils.do_barrier(self.controller)
 
 ############################################################################################################
-def dpctl_cmd_to_msg(self, cmd):
+def dpctl_cmd_to_msg(cmd):
     """
 
     the funciton parse the cmd string and excute them in the oftest
 
+    :rtype : object
     :param cmd: cmd string is a dtctl's parameter
                 string format: command+ command param+ match + action
     :return: (matching message, metch , instruction)
@@ -612,7 +613,8 @@ def dpctl_cmd_to_msg(self, cmd):
                       'mod': ofp.message.flow_modify,
                       'mods': ofp.message.flow_modify_strict}
 
-    flow_mod_setting = {'table': 0,
+    flow_mod_setting = {'cmd'  :ofp.message.flow_add,
+                        'table': 0,
                         'prio': 0,
                         'flags': 0,
                         'out_group': ofp.OFPG_ANY,
@@ -621,58 +623,61 @@ def dpctl_cmd_to_msg(self, cmd):
                         }
     match_class = {'eth_dst': ofp.oxm.eth_dst,
                    'in_port': ofp.oxm.in_port}
-    instruction_class = {'output': ofp.action.output}
+    apply_action_class = {'output': ofp.action.output}
     cmd_list = cmd.split(" ")
     print(cmd_list)
 
     match_param_str = None
-    instruction_param_str = None
+    apply_action_param_str = None
 
     cmd_name = cmd_list[0]
     cmd_param_str = cmd_list[1].replace(',', ';')
     if cmd_list[2].startswith("apply"):
-        instruction_param_str = cmd_list[2][cmd_list[2].find(":") + 1:].replace(',', ';')
+        apply_action_param_str = cmd_list[2][cmd_list[2].find(":") + 1:].replace(',', ';')
     else:
         match_param_str = cmd_list[2].replace(',', ';')
 
+    if len(cmd_list) > 3:
+        if cmd_list[3].startswith("apply"):
+            apply_action_param_str = cmd_list[3][cmd_list[3].find(":") + 1:].replace(',', ';')
+
     cmd_param = {}
     match_param = {}
-    instruction_param = {}
-
-    exec(cmd_param_str, cmd_param)
+    apply_action_param = {}
+    exec(cmd_param_str,{}, cmd_param)
     if match_param_str is not None:
-        exec(match_param_str, match_param)
-    if instruction_param_str is not None:
-        exec(instruction_param_str, instruction_param)
+        exec(match_param_str,{}, match_param)
+    if apply_action_param_str is not None:
+        exec(apply_action_param_str,{}, apply_action_param)
 
+    # print(apply_action_param_str)
     # generate the reuqest message
     match_list = []
-    instruction_list = []
+    apply_action_list = []
+    instruction_req = []
     for param in match_param.keys():
         match_list.append(match_class[param](match_param[param]))
-
-    for param in instruction_param.keys():
-        instruction_list.append(instruction_class[param](instruction_param[param]))
+    for param in apply_action_param.keys():
+        apply_action_list.append(apply_action_class[param](apply_action_param[param]))
     match_req = ofp.match(match_list)
-    instruction_req = ofp.instruction.apply_actions(instruction_list)
-
+    instruction_req.append(ofp.instruction.apply_actions(apply_action_list))
 
     # update command settings
     for item in flow_mod_setting.keys():
         if item in cmd_param.keys():
             flow_mod_setting[item] = cmd_param[item]
 
-    request = flow_mod_class[cmd_name](
+    request = flow_mod_class[flow_mod_setting['cmd']](
         table_id=cmd_param['table'],
         match=match_req,
         instructions=instruction_req,
         buffer_id=flow_mod_setting['buffer_id'],
         out_group=flow_mod_setting['out_group'],
         out_port=flow_mod_setting['out_port'],
-        priority=flow_mod_setting['prio']
+        priority=flow_mod_setting['prio'],
+        flags=flow_mod_setting['flags']
     )
-
-
-
+    print(request.show())
+    return (request,match_req,instruction_req)
 
 
