@@ -154,17 +154,18 @@ class NoOverlapChecking(base_tests.SimpleProtocol):
         testutils.delete_all_flows(self.controller)
 
         logging.info("Inserting flow: flow-mod cmd=add,table=0,prio=15 in_port=2 apply:output=1")
-        table_id = testutils.test_param_get("table", 0)
-        request1 = ofp.message.flow_add(
-            table_id=table_id,
-            match=ofp.match([ofp.oxm.in_port(2)]),
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(1)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15)
+        request1 = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd=add,table=0,prio=15 in_port=2 apply:output=1")
+        # table_id = testutils.test_param_get("table", 0)
+        # request1 = ofp.message.flow_add(
+        #     table_id=table_id,
+        #     match=ofp.match([ofp.oxm.in_port(2)]),
+        #     instructions=[
+        #         ofp.instruction.apply_actions([ofp.action.output(1)]),
+        #     ],
+        #     buffer_id=ofp.OFP_NO_BUFFER,
+        #     out_port=ofp.OFPP_ANY,
+        #     out_group=ofp.OFPG_ANY,
+        #     priority=15)
         self.controller.message_send(request1)
 
         logging.info("Inserting flow:  flow-mod cmd=add,table=0,prio=15,flags=0x2 apply:output=1")

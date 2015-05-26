@@ -596,10 +596,83 @@ def add_simple_flow(self,table_id=0, in_port=None,out_port=None,priority=15,flag
     testutils.do_barrier(self.controller)
 
 ############################################################################################################
-def dpctl_cmd_excute(self,cmd):
+def dpctl_cmd_to_msg(self, cmd):
     """
-    cmd string is a dtctl's parameter
+
     the funciton parse the cmd string and excute them in the oftest
-    :param cmd:
+
+    :param cmd: cmd string is a dtctl's parameter
+                string format: command+ command param+ match + action
+    :return: (matching message, metch , instruction)
     """
+    # constants
+    flow_mod_class = {'add': ofp.message.flow_add,
+                      'del': ofp.message.flow_delete,
+                      'dels': ofp.message.flow_delete_strict,
+                      'mod': ofp.message.flow_modify,
+                      'mods': ofp.message.flow_modify_strict}
+
+    flow_mod_setting = {'table': 0,
+                        'prio': 0,
+                        'flags': 0,
+                        'out_group': ofp.OFPG_ANY,
+                        'out_port': ofp.OFPP_ANY,
+                        'buffer_id': ofp.OFP_NO_BUFFER
+                        }
+    match_class = {'eth_dst': ofp.oxm.eth_dst,
+                   'in_port': ofp.oxm.in_port}
+    instruction_class = {'output': ofp.action.output}
+    cmd_list = cmd.split(" ")
+    print(cmd_list)
+
+    match_param_str = None
+    instruction_param_str = None
+
+    cmd_name = cmd_list[0]
+    cmd_param_str = cmd_list[1].replace(',', ';')
+    if cmd_list[2].startswith("apply"):
+        instruction_param_str = cmd_list[2][cmd_list[2].find(":") + 1:].replace(',', ';')
+    else:
+        match_param_str = cmd_list[2].replace(',', ';')
+
+    cmd_param = {}
+    match_param = {}
+    instruction_param = {}
+
+    exec(cmd_param_str, cmd_param)
+    if match_param_str is not None:
+        exec(match_param_str, match_param)
+    if instruction_param_str is not None:
+        exec(instruction_param_str, instruction_param)
+
+    # generate the reuqest message
+    match_list = []
+    instruction_list = []
+    for param in match_param.keys():
+        match_list.append(match_class[param](match_param[param]))
+
+    for param in instruction_param.keys():
+        instruction_list.append(instruction_class[param](instruction_param[param]))
+    match_req = ofp.match(match_list)
+    instruction_req = ofp.instruction.apply_actions(instruction_list)
+
+
+    # update command settings
+    for item in flow_mod_setting.keys():
+        if item in cmd_param.keys():
+            flow_mod_setting[item] = cmd_param[item]
+
+    request = flow_mod_class[cmd_name](
+        table_id=cmd_param['table'],
+        match=match_req,
+        instructions=instruction_req,
+        buffer_id=flow_mod_setting['buffer_id'],
+        out_group=flow_mod_setting['out_group'],
+        out_port=flow_mod_setting['out_port'],
+        priority=flow_mod_setting['prio']
+    )
+
+
+
+
 
