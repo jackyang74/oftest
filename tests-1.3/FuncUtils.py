@@ -595,3 +595,11 @@ def add_simple_flow(self,table_id=0, in_port=None,out_port=None,priority=15,flag
     self.controller.message_send(request)
     testutils.do_barrier(self.controller)
 
+############################################################################################################
+def dpctl_cmd_excute(self,cmd):
+    """
+    cmd string is a dtctl's parameter
+    the funciton parse the cmd string and excute them in the oftest
+    :param cmd:
+    """
+
