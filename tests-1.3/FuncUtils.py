@@ -10,7 +10,7 @@ import oftest.dataplane as dataplane
 import oftest.parse as parse
 import logging
 import types
-
+import re
 import oftest.base_tests as base_tests
 import oftest.testutils as testutils
 from time import sleep
@@ -607,6 +607,7 @@ def dpctl_cmd_to_msg(cmd):
     :return: (matching message, metch , instruction)
     """
     # constants
+    logging.info("Excute cmd:" + cmd)
     flow_mod_class = {'add': ofp.message.flow_add,
                       'del': ofp.message.flow_delete,
                       'dels': ofp.message.flow_delete_strict,
@@ -623,8 +624,10 @@ def dpctl_cmd_to_msg(cmd):
                         }
     match_class = {'eth_dst': ofp.oxm.eth_dst,
                    'in_port': ofp.oxm.in_port}
+
     apply_action_class = {'output': ofp.action.output}
-    cmd_list = cmd.split(" ")
+    cmd = re.sub("( )(\D)",'@\g<2>',cmd)
+    cmd_list = cmd.split('@')
     print(cmd_list)
 
     match_param_str = None
@@ -635,7 +638,7 @@ def dpctl_cmd_to_msg(cmd):
     if cmd_list[2].startswith("apply"):
         apply_action_param_str = cmd_list[2][cmd_list[2].find(":") + 1:].replace(',', ';')
     else:
-        match_param_str = cmd_list[2].replace(',', ';')
+        match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_list[2])
 
     if len(cmd_list) > 3:
         if cmd_list[3].startswith("apply"):
@@ -679,5 +682,4 @@ def dpctl_cmd_to_msg(cmd):
     )
     print(request.show())
     return (request,match_req,instruction_req)
-
 

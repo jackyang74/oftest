@@ -168,11 +168,9 @@ class NoOverlapChecking(base_tests.SimpleProtocol):
         self.assertTrue(response is None,
                         "Flow Mod Failed Error message was received")
 
-        # read flow entries to ensure the new entry is inserted
+        # read flow entries to ensure the new egntry is inserted
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 2)
-        for entry in flow_stats:
-            logging.debug(entry.show())
 
         self.assertTrue(request1.instructions, flow_stats[0].instructions)
         self.assertTrue(request2.instructions, flow_stats[1].instructions)
@@ -235,7 +233,7 @@ class NoTableAdd(base_tests.SimpleProtocol):
             testutils.do_barrier(self.controller)
 
         # read error message
-        request, _, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
+        response, _, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg)
         self.assertTrue(response is not None,
                         "No error message was received")
         self.assertEqual(response.code, ofp.OFPFMFC_TABLE_FULL)
@@ -450,85 +448,32 @@ class DeleteWithoutWildcards(base_tests.SimpleProtocol):
         # delete all entries
         testutils.delete_all_flows(self.controller)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        # flow add
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
         self.controller.message_send(request)
 
-        logging.info(
-            "Inserting flow: flow-mod cmd=dels,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        request = ofp.message.flow_delete(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        # flow dels
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='dels',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        self.controller.message_send(request)
+
+        # flow add
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        self.controller.message_send(request)
+
+        # flow del
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        # verify the num of flow entry is 1
-        flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(len(flow_stats), 0)
-
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
-        self.controller.message_send(request)
-
-        logging.info(
-            "Inserting flow: flow-mod cmd=dels,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        request = ofp.message.flow_delete_strict(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
-        self.controller.message_send(request)
-        testutils.do_barrier(self.controller)
-
-        # verify the num of flow entry is 1
+        # verify the num of flow entry is 0
         flow_stats = testutils.get_flow_stats(self, ofp.match())
         self.assertEqual(len(flow_stats), 0)
 
@@ -546,61 +491,22 @@ class DeleteWithWildcardsSet(base_tests.SimpleProtocol):
         # delete all entries
         testutils.delete_all_flows(self.controller)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        # flow add
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={}"
+                                                           " apply:output={}".format(in_port, out_port))
         self.controller.message_send(request)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=14 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=14
-        )
+        # flow add
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
         self.controller.message_send(request)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-        )
+        # flow del
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={} apply:output={}"
+                                                   .format(in_port, out_port))
         self.controller.message_send(request)
-        testutils.do_barrier()
+        testutils.do_barrier(self.controller)
 
         # verify the num of flow entry is 0
         flow_stats = testutils.get_flow_stats(self, ofp.match())
@@ -620,62 +526,23 @@ class StrictDeleteWithWildcardsSet(base_tests.SimpleProtocol):
         # delete all entries
         testutils.delete_all_flows(self.controller)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port)])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=15
-        )
+        # flow add
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={}"
+                                                           " apply:output={}".format(in_port, out_port))
         self.controller.message_send(request)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=14 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-            priority=14
-        )
+        # flow add
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                   "eth_dst={} apply:output={}"
+                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
         self.controller.message_send(request)
 
-        logging.info(
-            "Inserting flow:  flow-mod cmd=add,table=0,prio=15 in_port={0},"
-            "eth_dst=00:13:3b:0f:42:1c apply: output={1}".format(in_port, out_port))
-        table_id = 0
-        match_req = ofp.match([ofp.oxm.in_port(in_port),
-                               ofp.oxm.eth_dst("00:13:3b:0f:42:1c")])
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            match=match_req,
-            instructions=[
-                ofp.instruction.apply_actions([ofp.action.output(out_port)]),
-            ],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            out_port=ofp.OFPP_ANY,
-            out_group=ofp.OFPG_ANY,
-        )
+        # flow del
+        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='dels',table=0,prio=15 in_port={} apply:output={}"
+                                                   .format(in_port, out_port))
         self.controller.message_send(request)
-        testutils.do_barrier()
+        testutils.do_barrier(self.controller)
 
-        # verify the num of flow entry is 0
+        # verify the num of flow entry is 1
         flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(len(flow_stats), 0)
+        self.assertEqual(len(flow_stats), 1)
