@@ -426,7 +426,7 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
 
         # Inserting flow: flow-mod cmd=del,table=0,prio=15 in_port=0 flags=OFPFF_SEND_FLOW_REM apply:output=2
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15,flags={} in_port={}"
-                                                   " apply:output={}".format( ofp.OFPFF_SEND_FLOW_REM,in_port,
+                                                   " apply:output={}".format(ofp.OFPFF_SEND_FLOW_REM, in_port,
                                                                              out_port))
         self.controller.message_send(request)
 
@@ -449,27 +449,31 @@ class DeleteWithoutWildcards(base_tests.SimpleProtocol):
         testutils.delete_all_flows(self.controller)
 
         # flow add
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
 
         # flow dels
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='dels',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='dels',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
 
         # flow add
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
 
         # flow del
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -497,14 +501,16 @@ class DeleteWithWildcardsSet(base_tests.SimpleProtocol):
         self.controller.message_send(request)
 
         # flow add
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
 
         # flow del
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='del',table=0,prio=15 in_port={} apply:output={}"
-                                                   .format(in_port, out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg(
+            "flow-mod cmd='del',table=0,prio=15 in_port={} apply:output={}"
+            .format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
@@ -532,14 +538,64 @@ class StrictDeleteWithWildcardsSet(base_tests.SimpleProtocol):
         self.controller.message_send(request)
 
         # flow add
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
-                                                   "eth_dst={} apply:output={}"
-                                                   .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c], out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
         self.controller.message_send(request)
 
         # flow del
-        request,match_req, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='dels',table=0,prio=15 in_port={} apply:output={}"
-                                                   .format(in_port, out_port))
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg(
+            "flow-mod cmd='dels',table=0,prio=15 in_port={} apply:output={}"
+            .format(in_port, out_port))
+        self.controller.message_send(request)
+        testutils.do_barrier(self.controller)
+
+        # verify the num of flow entry is 1
+        flow_stats = testutils.get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 1)
+
+
+@testutils.group('TestSuite40')
+class DeleteIgnorePriorities(base_tests.SimpleProtocol):
+    """
+
+
+    """
+
+    def runTest(self):
+        logging.info("Test case 40.170: Testing that delete message ignores priorities")
+        in_port, out_port = testutils.openflow_ports(2)
+        # delete all entries
+        testutils.delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={}"
+                                                           " apply:output={}".format(in_port, out_port))
+        self.controller.message_send(request)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
+        self.controller.message_send(request)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=14 in_port={},"
+                                                           "eth_dst={} apply:output={}"
+                                                           .format(in_port, [0x00, 0x13, 0x3b, 0x0f, 0x42, 0x1c],
+                                                                   out_port))
+        self.controller.message_send(request)
+
+        flow_stats = testutils.get_flow_stats(self, ofp.match())
+        for entry in flow_stats:
+            print(entry.show())
+
+        # flow del
+        request, match_req, _ = FuncUtils.dpctl_cmd_to_msg(
+            "flow-mod cmd='del',table=0,prio=15 in_port={} apply:output={}"
+            .format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
