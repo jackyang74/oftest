@@ -625,14 +625,14 @@ class StrictDeleteNotIgnorePriorities(base_tests.SimpleProtocol):
 
         # flow del
         request, match_req, _ = FuncUtils.dpctl_cmd_to_msg(
-            "flow-mod cmd='del',table=0,prio=15 in_port={} apply:output={}"
+            "flow-mod cmd='dels',table=0,prio=15 in_port={} apply:output={}"
                 .format(in_port, out_port))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
         # verify the num of flow entry is 1
         flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(len(flow_stats), 0, 1)
+        self.assertEqual(len(flow_stats), 1)
         self.assertEqual(flow_stats[0].priority, 14, "Not matching entry is removed")
 
 
@@ -659,6 +659,8 @@ class DeleteWithConstraintOutPort(base_tests.SimpleProtocol):
                                                    " apply:output={}".format(in_port, out_port2))
         self.controller.message_send(request)
 
+        flow_stats = testutils.get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 2, "Flow was not inserted correctly")
         # flow del
         request, match_req, _ = FuncUtils.dpctl_cmd_to_msg(
             "flow-mod cmd='del',table=0,prio=15,out_port={}".format(out_port1))
@@ -667,9 +669,7 @@ class DeleteWithConstraintOutPort(base_tests.SimpleProtocol):
 
         # verify the num of flow entry is 1 and matching entry is removed
         flow_stats = testutils.get_flow_stats(self, ofp.match())
-        self.assertEqual(len(flow_stats), 0, 1)
-        self.assertEqual(flow_stats[0].instructions[0].apply_actions[0].oxm.value, out_port2,
-                         "Not matching entry is removed")
+        self.assertEqual(len(flow_stats), 1, len(flow_stats))
 
 
 @testutils.group('TestSuite40')
@@ -682,23 +682,24 @@ class OutportIgnoredForAddModify(base_tests.SimpleDataPlane):
     def runTest(self):
         logging.info("Test case 40.200: out_port ignored by add and modify requests")
         in_port, out_port1, out_port2 = testutils.openflow_ports(3)
+
         # delete all entries
         testutils.delete_all_flows(self.controller)
 
         # flow add
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15,out_port={} in_port={}"
-                                                   " apply:output={}".format(out_port2, in_port, out_port1))
+                                                   " apply:output={}".format(out_port1, in_port, out_port1))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)
 
-        #send packet to in_port and verify
+        # send packet to in_port and verify
         pkt = str(testutils.simple_tcp_packet())
         self.dataplane.send(in_port, pkt)
         testutils.verify_packets(self, pkt, [out_port1])
         testutils.verify_no_packet(self, pkt, out_port2)
 
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='mod',table=0,prio=14,out_port={} in_port={}"
+        request, _, instruction = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='mod',table=0,prio=15,out_port={} in_port={}"
                                                    " apply:output={}".format(out_port1, in_port, out_port2))
         self.controller.message_send(request)
         testutils.do_barrier(self.controller)

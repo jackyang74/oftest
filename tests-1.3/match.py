@@ -84,7 +84,7 @@ class MatchTest(base_tests.SimpleDataPlane):
             verify_packet_in(self, pktstr, in_port, ofp.OFPR_ACTION)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthDst(MatchTest):
     """
     Test Case 50.40: Ethernet destination address
@@ -174,7 +174,7 @@ class EthDstMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthSrc(MatchTest):
     """
     Test Case 50.30: Ethernet source address
@@ -264,7 +264,7 @@ class EthSrcMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthTypeIPv4(MatchTest):
     """
     TestCase 50.50: Ethernet frame type
@@ -304,7 +304,7 @@ class EthTypeIPv4(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthTypeIPv6(MatchTest):
     """
     TestCase 50.50: Ethernet frame type
@@ -331,7 +331,7 @@ class EthTypeIPv6(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthTypeARP(MatchTest):
     """
     TestCase 50.50: Ethernet frame type
@@ -356,7 +356,7 @@ class EthTypeARP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class EthTypeNone(MatchTest):
     """
     Match on no ethertype (IEEE 802.3 without SNAP header)
@@ -414,7 +414,7 @@ class VlanExact(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class VlanVID(MatchTest):
     """
     TestCase 50.60: Input VLAN id
@@ -463,7 +463,7 @@ class VlanVIDMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class VlanPCP(MatchTest):
     """
     TestCase 50.70: Input VLAN priority
@@ -579,7 +579,7 @@ class VlanAbsent(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4Dscp(MatchTest):
     """
     TestCase 50.110: IP TOS bits(dscp)
@@ -625,7 +625,7 @@ class IPv6Dscp(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4Ecn(MatchTest):
     """
     TestCase 50.110: IP TOS bits(ecn)
@@ -673,7 +673,7 @@ class IPv6Ecn(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4ProtoTCP(MatchTest):
     """
     TestCase 50.100.1: OP protocol(TCP type)
@@ -719,7 +719,7 @@ class IPv6ProtoTCP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4ProtoUDP(MatchTest):
     """
     TestCase 50.100.1: OP protocol(UDP type)
@@ -765,7 +765,7 @@ class IPv6ProtoUDP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4ProtoICMP(MatchTest):
     """
     TestCase 50.100.1: OP protocol(ICMP type)
@@ -811,7 +811,7 @@ class IPv6ProtoICMP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4Src(MatchTest):
     """
     TestCase 50.80: IP source address
@@ -886,7 +886,7 @@ class IPv4SrcMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4Dst(MatchTest):
     """
     TestCase 50.90: IP destination address
@@ -1127,7 +1127,7 @@ class IPv6DstMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4TCPSrc(MatchTest):
     """
     TestCase 50.120: TCP/UDP source port
@@ -1199,7 +1199,7 @@ class IPv6TCPSrc(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPv4TCPDst(MatchTest):
     """
     TestCase 50.130: TCP/UDP destination port
@@ -1655,7 +1655,7 @@ class ArpTPAMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class AllWildcardMatch(base_tests.SimpleDataPlane):
     """
     TestCase 50.10: All Wildcards
@@ -1684,7 +1684,7 @@ class AllWildcardMatch(base_tests.SimpleDataPlane):
         verify_no_packet(self, pkt1, out_port2)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class InPort(base_tests.SimpleDataPlane):
     """
 
@@ -1714,7 +1714,7 @@ class InPort(base_tests.SimpleDataPlane):
             buffer_id=ofp.OFP_NO_BUFFER,
             priority=1)
         self.controller.message_send(request)
-        testutils.do_barrier(self.controller)
+        do_barrier(self.controller)
 
         pkt = simple_tcp_packet()
         pktstr = str(pkt)
@@ -1727,7 +1727,7 @@ class InPort(base_tests.SimpleDataPlane):
         verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class L2(base_tests.SimpleDataPlane):
     """
     TestCase 50.140: L2
@@ -1791,7 +1791,7 @@ class L2(base_tests.SimpleDataPlane):
         verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
         verify_no_packet(self, pkt2, bad_port)
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class L3(base_tests.SimpleDataPlane):
     """
     TestCase 50.150: L3
@@ -1851,7 +1851,7 @@ class L3(base_tests.SimpleDataPlane):
         verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
         verify_no_packet(self, pkt2, bad_port)
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class L4(base_tests.SimpleDataPlane):
     """
     TestCase 50.160: L4
@@ -1913,7 +1913,7 @@ class L4(base_tests.SimpleDataPlane):
         verify_no_packet(self, pkt2, bad_port)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class MatchPriorities(base_tests.SimpleDataPlane):
 
     """
@@ -1943,7 +1943,7 @@ class MatchPriorities(base_tests.SimpleDataPlane):
         verify_no_packet(self, pkt1, out_port2)
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
     """
 
@@ -1956,7 +1956,7 @@ class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
         # TODO
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPSourceAddrARP(base_tests.SimpleDataPlane):
     """
 
@@ -1995,7 +1995,7 @@ class IPSourceAddrARP(base_tests.SimpleDataPlane):
 
 
 
-@testutils.group('TestSuite50')
+@group('TestSuite50')
 class IPDestAddrARP(base_tests.SimpleDataPlane):
     """
 

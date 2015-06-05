@@ -607,7 +607,8 @@ def dpctl_cmd_to_msg(cmd):
     :return: (matching message, metch , instruction)
     """
     # constants
-    logging.info("Excute cmd:" + cmd)
+    # logging.info("Excute cmd:" + cmd)
+    print("Excute cmd:" + cmd)
     flow_mod_class = {'add': ofp.message.flow_add,
                       'del': ofp.message.flow_delete,
                       'dels': ofp.message.flow_delete_strict,
@@ -642,10 +643,6 @@ def dpctl_cmd_to_msg(cmd):
 
     cmd_name = cmd_list[0]
     cmd_param_str = cmd_list[1].replace(',', ';')
-    if cmd_list[2].startswith("apply"):
-        apply_action_param_str = cmd_list[2][cmd_list[2].find(":") + 1:].replace(',', ';')
-    else:
-        match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_list[2])
 
     metadata = None
     goto_table = None
@@ -699,10 +696,10 @@ def dpctl_cmd_to_msg(cmd):
         instructions=instruction_req,
         buffer_id=flow_mod_setting['buffer_id'],
         out_group=flow_mod_setting['out_group'],
-        out_port=flow_mod_setting['out_port'],
+        out_port=ofp.OFPP_ANY,#flow_mod_setting['out_port'],
         priority=flow_mod_setting['prio'],
         flags=flow_mod_setting['flags']
     )
-    print(request.show())
+    # print(request.show())
     return (request,match_req,instruction_req)
 
