@@ -17,6 +17,7 @@ import oftest.packet as scapy
 
 from oftest.testutils import *
 from oftest.parse import parse_ipv6
+import FuncUtils
 
 class MatchTest(base_tests.SimpleDataPlane):
     """
@@ -42,16 +43,6 @@ class MatchTest(base_tests.SimpleDataPlane):
         delete_all_flows(self.controller)
         # exit(0)
         logging.info("Inserting flow sending matching packets to port %d", out_port)
-
-        request = ofp.message.flow_add(
-                table_id=table_id,
-                instructions=[
-                    ofp.instruction.write_metadata(metadata=0x0000000300000000)
-                ],
-                priority=0)
-        self.controller.message_send(request)
-
-
         request = ofp.message.flow_add(
                 table_id=table_id,
                 match=match,
@@ -92,66 +83,12 @@ class MatchTest(base_tests.SimpleDataPlane):
             self.dataplane.send(in_port, pktstr)
             verify_packet_in(self, pktstr, in_port, ofp.OFPR_ACTION)
 
-# Does not use MatchTest because the ingress port is not a packet field
-class InPort(base_tests.SimpleDataPlane):
-    """
-    Match on ingress port
-    """
-    def runTest(self):
-        in_port, out_port, bad_port = openflow_ports(3)
-        table_id = test_param_get("table", 0)
 
-        match = ofp.match([
-            ofp.oxm.in_port(in_port)
-        ])
-
-        pkt = simple_tcp_packet()
-
-        logging.info("Running match test for %s", match.show())
-
-        delete_all_flows(self.controller)
-
-        logging.info("Inserting flow sending matching packets to port %d", out_port)
-        request = ofp.message.flow_add(
-                table_id=table_id,
-                match=match,
-                instructions=[
-                    ofp.instruction.apply_actions(
-                        actions=[
-                            ofp.action.output(
-                                port=out_port,
-                                max_len=ofp.OFPCML_NO_BUFFER)])],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=1000)
-        self.controller.message_send(request)
-
-        logging.info("Inserting match-all flow sending packets to controller")
-        request = ofp.message.flow_add(
-            table_id=table_id,
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=1)
-        self.controller.message_send(request)
-
-        do_barrier(self.controller)
-
-        pktstr = str(pkt)
-
-        logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
-        self.dataplane.send(in_port, pktstr)
-        verify_packets(self, pktstr, [out_port])
-
-        logging.info("Sending packet on non-matching ingress port, expecting packet-in")
-        self.dataplane.send(bad_port, pktstr)
-        verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
-
+@testutils.group('TestSuite50')
 class EthDst(MatchTest):
     """
+    Test Case 50.40: Ethernet destination address
+
     Match on ethernet destination
     """
     def runTest(self):
@@ -236,8 +173,12 @@ class EthDstMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class EthSrc(MatchTest):
     """
+    Test Case 50.30: Ethernet source address
+
     Match on ethernet source
     """
     def runTest(self):
@@ -322,8 +263,12 @@ class EthSrcMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class EthTypeIPv4(MatchTest):
     """
+    TestCase 50.50: Ethernet frame type
+
     Match on ethertype (IPv4)
     """
     def runTest(self):
@@ -358,8 +303,12 @@ class EthTypeIPv4(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class EthTypeIPv6(MatchTest):
     """
+    TestCase 50.50: Ethernet frame type
+
     Match on ethertype (IPv6)
     """
     def runTest(self):
@@ -381,8 +330,12 @@ class EthTypeIPv6(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class EthTypeARP(MatchTest):
     """
+    TestCase 50.50: Ethernet frame type
+
     Match on ethertype (ARP)
     """
     def runTest(self):
@@ -402,6 +355,8 @@ class EthTypeARP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class EthTypeNone(MatchTest):
     """
     Match on no ethertype (IEEE 802.3 without SNAP header)
@@ -459,8 +414,10 @@ class VlanExact(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+@testutils.group('TestSuite50')
 class VlanVID(MatchTest):
     """
+    TestCase 50.60: Input VLAN id
     Match on VLAN VID
     """
     def runTest(self):
@@ -505,8 +462,12 @@ class VlanVIDMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class VlanPCP(MatchTest):
     """
+    TestCase 50.70: Input VLAN priority
+
     Match on VLAN PCP (VID matched)
     """
     def runTest(self):
@@ -617,8 +578,12 @@ class VlanAbsent(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4Dscp(MatchTest):
     """
+    TestCase 50.110: IP TOS bits(dscp)
+
     Match on ipv4 dscp
     """
     def runTest(self):
@@ -659,8 +624,12 @@ class IPv6Dscp(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4Ecn(MatchTest):
     """
+    TestCase 50.110: IP TOS bits(ecn)
+
     Match on ipv4 ecn
     """
     def runTest(self):
@@ -703,8 +672,12 @@ class IPv6Ecn(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4ProtoTCP(MatchTest):
     """
+    TestCase 50.100.1: OP protocol(TCP type)
+
     Match on ipv4 protocol field (TCP)
     """
     def runTest(self):
@@ -745,8 +718,12 @@ class IPv6ProtoTCP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4ProtoUDP(MatchTest):
     """
+    TestCase 50.100.1: OP protocol(UDP type)
+
     Match on ipv4 protocol field (UDP)
     """
     def runTest(self):
@@ -787,8 +764,12 @@ class IPv6ProtoUDP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4ProtoICMP(MatchTest):
     """
+    TestCase 50.100.1: OP protocol(ICMP type)
+
     Match on ipv4 protocol field (ICMP)
     """
     def runTest(self):
@@ -829,8 +810,12 @@ class IPv6ProtoICMP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4Src(MatchTest):
     """
+    TestCase 50.80: IP source address
+
     Match on ipv4 source address
     """
     def runTest(self):
@@ -900,8 +885,12 @@ class IPv4SrcMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4Dst(MatchTest):
     """
+    TestCase 50.90: IP destination address
+
     Match on ipv4 destination address
     """
     def runTest(self):
@@ -1137,8 +1126,12 @@ class IPv6DstMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4TCPSrc(MatchTest):
     """
+    TestCase 50.120: TCP/UDP source port
+
     Match on ipv4 tcp source port
     """
     def runTest(self):
@@ -1205,8 +1198,12 @@ class IPv6TCPSrc(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@testutils.group('TestSuite50')
 class IPv4TCPDst(MatchTest):
     """
+    TestCase 50.130: TCP/UDP destination port
+
     Match on ipv4 tcp destination port
     """
     def runTest(self):
@@ -1656,3 +1653,389 @@ class ArpTPAMasked(MatchTest):
         }
 
         self.verify_match(match, matching, nonmatching)
+
+
+@testutils.group('TestSuite50')
+class AllWildcardMatch(base_tests.SimpleDataPlane):
+    """
+    TestCase 50.10: All Wildcards
+
+    Verify for an all wildcarded flow all the injected packets would match that flow
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.10: All Wildcards")
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "apply:output={}".format(out_port1))
+
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        #check for different  match fields and verify packet implements the action specified in the flow
+        pkt1 = str(simple_tcp_packet(eth_src="00:01:01:01:01:01"))
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port1])
+        verify_no_packet(self, pkt1, out_port2)
+
+
+@testutils.group('TestSuite50')
+class InPort(base_tests.SimpleDataPlane):
+    """
+
+    Match on ingress port
+    """
+    def runTest(self):
+        logging.info("Test case 50.20: Ingress Port")
+
+        delete_all_flows(self.controller)
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
+                                                   "apply:output={}".format(in_port,out_port))
+        self.controller.message_send(request)
+
+        #flow add to controller
+        logging.info("Inserting match-all flow sending packets to controller")
+        request = ofp.message.flow_add(
+            table_id=0,
+            instructions=[
+                ofp.instruction.apply_actions(
+                    actions=[
+                        ofp.action.output(
+                            port=ofp.OFPP_CONTROLLER,
+                            max_len=ofp.OFPCML_NO_BUFFER)])],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1)
+        self.controller.message_send(request)
+        testutils.do_barrier(self.controller)
+
+        pkt = simple_tcp_packet()
+        pktstr = str(pkt)
+        logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
+        self.dataplane.send(in_port, pktstr)
+        verify_packets(self, pktstr, [out_port])
+
+        logging.info("Sending packet on non-matching ingress port, expecting packet-in")
+        self.dataplane.send(bad_port, pktstr)
+        verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
+
+
+@testutils.group('TestSuite50')
+class L2(base_tests.SimpleDataPlane):
+    """
+    TestCase 50.140: L2
+
+    Verify for an all wildcarded flow all the injected packets would match that flow
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.140: L2")
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+                                                   "meta={}".format(0x300000000))
+
+        self.controller.message_send(request)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
+                                                   "meta={}".format(0x400000000))
+
+        self.controller.message_send(request)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "in_port={},eth_dst={} "
+                                                   "meta:0x2 goto:1".
+                                                   format(in_port,[0x00, 0x00, 0x00, 0x00, 0x00, 0x44]))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "eth_src={},meta=0x2,vlan_vid=2 "
+                                                   "meta:0x2 goto:2".
+                                                   format([0x00, 0x00, 0x00, 0x00, 0x00, 0x33]))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "eth_type=0x0800,meta=0x2 "
+                                                   "apply:output={}".format(out_port))
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        #check for different  match fields and verify packet implements the action specified in the flow
+        pkt1 = str(simple_tcp_packet(eth_src="00:00:00:00:00:44",
+                                     eth_dst="00:00:00:00:00:33",
+                                     dl_vlan_enable=True,
+                                     vlan_vid= 2,
+                                     ))
+
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port])
+        verify_no_packet(self, pkt1, bad_port)
+
+
+        pkt2 = str(simple_tcp_packet(eth_src="00:00:00:00:00:45",
+                                     eth_dst="00:00:00:00:00:33",
+                                     dl_vlan_enable=True,
+                                     vlan_vid= 4,
+                                     ))
+
+        self.dataplane.send(in_port, pkt2)
+        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
+        verify_no_packet(self, pkt2, bad_port)
+
+@testutils.group('TestSuite50')
+class L3(base_tests.SimpleDataPlane):
+    """
+    TestCase 50.150: L3
+
+    Verify for an all wildcarded flow all the injected packets would match that flow
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.150: L3")
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+                                                   "meta={}".format(0x100000000))
+
+        self.controller.message_send(request)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
+                                                   "meta={}".format(0x400000000))
+
+        self.controller.message_send(request)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "in_port={} "
+                                                   "meta:0x2 goto:1".
+                                                   format(in_port))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "ip_dst={},meta=0x2 "
+                                                   "meta:0x3 goto:2".
+                                                   format(0xc0a80102))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
+                                                   "ip_src={],eth_type=0x0800,meta=0x3 "
+                                                   "apply:output={}".format(0xc0a80101,out_port))
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        #check for different  match fields and verify packet implements the action specified in the flow
+        pkt1 = str(simple_tcp_packet(ip_src="192.168.1.1",
+                                     ip_dst="192.168.1.2",
+                                     ))
+
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port])
+        verify_no_packet(self, pkt1, bad_port)
+
+
+        pkt2 = str(simple_tcp_packet(ip_src="192.168.1.2",
+                                     ip_dst="192.168.1.1",
+                                     ))
+
+        self.dataplane.send(in_port, pkt2)
+        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
+        verify_no_packet(self, pkt2, bad_port)
+
+@testutils.group('TestSuite50')
+class L4(base_tests.SimpleDataPlane):
+    """
+    TestCase 50.160: L4
+
+    Verify for an all wildcarded flow all the injected packets would match that flow
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.160: L4")
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+                                                   "meta={}".format(0x100000000))
+
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
+                                                   "meta={}".format(0x400000000))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "in_port={} "
+                                                   "meta:0x2 goto:1".
+                                                   format(in_port))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "udp_src={},udp_dst={},meta=0x2 "
+                                                   "meta:0x3 goto:2".
+                                                   format(100,200))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
+                                                   "ip_proto=17,eth_type=0x0800,meta=0x3 "
+                                                   "apply:output={}".format(out_port))
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        #check for different  match fields and verify packet implements the action specified in the flow
+        pkt1 = str(simple_udp_packet(udp_sport=100,
+                                     udp_dport=200,
+                                     ))
+
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port])
+        verify_no_packet(self, pkt1, bad_port)
+
+
+        pkt2 = str(simple_udp_packet(udp_sport=101,
+                                     udp_dport=200,
+                                     ))
+
+        self.dataplane.send(in_port, pkt2)
+        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
+        verify_no_packet(self, pkt2, bad_port)
+
+
+@testutils.group('TestSuite50')
+class MatchPriorities(base_tests.SimpleDataPlane):
+
+    """
+
+    """
+    def runTest(self):
+        logging.info("Test case 50.190: Match priorities")
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
+                                                   "apply:output={}".format(in_port,out_port1))
+        self.controller.message_send(request)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=14 in_port={} "
+                                                   "apply:output={}".format(in_port,out_port2))
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        pkt1 = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port1])
+        verify_no_packet(self, pkt1, out_port2)
+
+
+@testutils.group('TestSuite50')
+class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
+    """
+
+    """
+    def runTest(self):
+        logging.info("Test case 50.200: Fragments wildcard TCP Port")
+        in_port, out_port1, out_port2 = openflow_ports(3)
+        #Clear Switch State
+        delete_all_flows(self.controller)
+        # TODO
+
+
+@testutils.group('TestSuite50')
+class IPSourceAddrARP(base_tests.SimpleDataPlane):
+    """
+
+    """
+    def runTest(self):
+        logging.info("Test case 50.210: IP source address of ARP packets")
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+         #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
+                                                   "meta={}".format(0x400000000))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "ip_src={},eth_type=0x0806,meta=0x3 "
+                                                   "apply:output={}".format(0xc0a80101,out_port))
+        self.controller.message_send(request)
+
+        pkt1 = str(simple_arp_packet(ip_snd="192.168.1.2"))
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port])
+        verify_no_packet(self, pkt1, bad_port)
+
+
+        pkt2 = str(simple_arp_packet(ip_snd="192.168.1.2"))
+        self.dataplane.send(in_port, pkt2)
+        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
+        verify_no_packet(self, pkt2, bad_port)
+
+
+
+
+
+
+
+@testutils.group('TestSuite50')
+class IPDestAddrARP(base_tests.SimpleDataPlane):
+    """
+
+    """
+    def runTest(self):
+        logging.info("Test case 50.200: Fragments wildcard TCP Port")
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
+                                                   "meta={}".format(0x100000000))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+                                                   "meta={}".format(0x200000000))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "ip_dst={},meta=0x3 goto:1".format(0xc0a80101))
+        self.controller.message_send(request)
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "eth_type=0x0806,meta=0x3 "
+                                                   "apply:output={}".format(out_port))
+        self.controller.message_send(request)
+
+        pkt1 = str(simple_arp_packet(ip_tgt="192.168.1.2"))
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port])
+        verify_no_packet(self, pkt1, bad_port)
+
+
+        pkt2 = str(simple_arp_packet(ip_tgt="192.168.1.2"))
+        self.dataplane.send(in_port, pkt2)
+        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
+        verify_no_packet(self, pkt2, bad_port)
+
+
+
+

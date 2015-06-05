@@ -24,7 +24,7 @@ import time
 import FuncUtils
 
 
-
+@testutils.group('TestSuite50')
 class AllWildcardMatch(base_tests.SimpleDataPlane):
 
     """
@@ -33,49 +33,63 @@ class AllWildcardMatch(base_tests.SimpleDataPlane):
     """
 
     def runTest(self):
-        logging.info("50.10 --> Running All Wildcard Match test")
-
-        of_ports = config["port_map"].keys()
-        of_ports.sort()
-        self.assertTrue(len(of_ports) > 1, "Not enough ports for test")
+        logging.info("Test case 50.10: All Wildcards")
+        in_port, out_port1, out_port2 = testutils.openflow_ports(3)
 
         #Clear Switch State
         testutils.delete_all_flows(self.controller)
 
-        logging.info("Inserting an all wildcarded flow and sending packets with various match fields")
-        logging.info("Expecting all sent packets to match")
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15} "
+                                                   "apply:output={}".format(out_port1))
 
-        in_port = of_ports[0]
-        egress_port = of_ports[1]
-
-        #Insert an All Wildcarded flow.
-        FuncUtils.wildcard_all(self,of_ports)
+        self.controller.message_send(request)
+        testutils.do_barrier(self.controller)
 
         #check for different  match fields and verify packet implements the action specified in the flow
         pkt1 = str(testutils.simple_tcp_packet(eth_src="00:01:01:01:01:01"))
         self.dataplane.send(in_port, pkt1)
-        testutils.verify_packets(self, pkt1, [egress_port])
+        testutils.verify_packets(self, pkt1, [out_port1])
+        testutils.verify_no_packet(self, pkt1, out_port2)
 
-        # pkt2 = str(testutils.simple_tcp_packet(eth_dst="00:01:01:01:01:01"))
-        # self.dataplane.send(in_port, pkt2)
-        # verify_packets(self, pkt2, [egress_port])
-        #
-        # pkt3 = str(testutils.simple_tcp_packet(ip_src="192.168.2.1"))
-        # self.dataplane.send(in_port, pkt3)
-        # verify_packets(self, pkt3, [egress_port])
-        #
-        # pkt4 = str(testutils.simple_tcp_packet(ip_dst="192.168.2.2"))
-        # self.dataplane.send(in_port, pkt4)
-        # verify_packets(self, pkt4, [egress_port])
-        #
-        # pkt5 = str(testutils.simple_tcp_packet(ip_tos=2))
-        # self.dataplane.send(in_port, pkt5)
-        # verify_packets(self, pkt5, [egress_port])
-        #
-        # pkt6 = str(testutils.simple_tcp_packet(tcp_sport=8080))
-        # self.dataplane.send(in_port, pkt6)
-        # verify_packets(self, pkt6, [egress_port])
-        #
-        # pkt7 = str(testutils.simple_tcp_packet(tcp_dport=8081))
-        # self.dataplane.send(in_port, pkt7)
-        # verify_packets(self, pkt7, [egress_port])
+
+@testutils.group('TestSuite50')
+class InPort(base_tests.SimpleDataPlane):
+    """
+    Match on ingress port
+    """
+    def runTest(self):
+        logging.info("Test case 50.20: Ingress Port")
+
+        testutils.delete_all_flows(self.controller)
+        in_port, out_port, bad_port = testutils.openflow_ports(3)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={}} "
+                                                   "apply:output={}".format(in_port,out_port))
+        self.controller.message_send(request)
+
+        #flow add to controller
+        logging.info("Inserting match-all flow sending packets to controller")
+        request = ofp.message.flow_add(
+            table_id=0,
+            instructions=[
+                ofp.instruction.apply_actions(
+                    actions=[
+                        ofp.action.output(
+                            port=ofp.OFPP_CONTROLLER,
+                            max_len=ofp.OFPCML_NO_BUFFER)])],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1)
+        self.controller.message_send(request)
+        testutils.do_barrier(self.controller)
+
+        pkt = testutils.simple_tcp_packet()
+        pktstr = str(pkt)
+        logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
+        self.dataplane.send(in_port, pktstr)
+        testutils.verify_packets(self, pktstr, [out_port])
+
+        logging.info("Sending packet on non-matching ingress port, expecting packet-in")
+        self.dataplane.send(bad_port, pktstr)
+        testutils.verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)

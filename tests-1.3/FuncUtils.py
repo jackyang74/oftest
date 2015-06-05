@@ -622,8 +622,15 @@ def dpctl_cmd_to_msg(cmd):
                         'out_port': ofp.OFPP_ANY,
                         'buffer_id': ofp.OFP_NO_BUFFER
                         }
-    match_class = {'eth_dst': ofp.oxm.eth_dst,
-                   'in_port': ofp.oxm.in_port}
+    match_class = {'eth_dst' : ofp.oxm.eth_dst,
+                   'eth_src' : ofp.oxm.eth_src,
+                   'in_port' : ofp.oxm.in_port,
+                   'meta'    : ofp.oxm.metadata,
+                   "udp_src" : ofp.oxm.udp_src,
+                   "ip_src"  : ofp.oxm.ipv4_src,
+                   "ip_dst"  : ofp.oxm.ipv4_dst,
+                   "ip_proto": ofp.oxm.ip_proto,
+                   }
 
     apply_action_class = {'output': ofp.action.output}
     cmd = re.sub("( )(\D)",'@\g<2>',cmd)
@@ -640,9 +647,17 @@ def dpctl_cmd_to_msg(cmd):
     else:
         match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_list[2])
 
-    if len(cmd_list) > 3:
-        if cmd_list[3].startswith("apply"):
+    metadata = None
+    goto_table = None
+    for cmd_item in cmd_list[2:]:
+        if cmd_item.startswith("apply"):
             apply_action_param_str = cmd_list[3][cmd_list[3].find(":") + 1:].replace(',', ';')
+        elif cmd_item.startswith("meta"):
+            metadata = int(cmd_item[5:])
+        elif cmd_item.startswith("goto"):
+            goto_table = int(cmd_item[5:])
+        else:
+            match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_list[2])
 
     cmd_param = {}
     match_param = {}
@@ -653,17 +668,25 @@ def dpctl_cmd_to_msg(cmd):
     if apply_action_param_str is not None:
         exec(apply_action_param_str,{}, apply_action_param)
 
-    # print(apply_action_param_str)
     # generate the reuqest message
+    # match
     match_list = []
-    apply_action_list = []
-    instruction_req = []
     for param in match_param.keys():
         match_list.append(match_class[param](match_param[param]))
+    match_req = ofp.match(match_list)
+
+    # actions
+    apply_action_list = []
     for param in apply_action_param.keys():
         apply_action_list.append(apply_action_class[param](apply_action_param[param]))
-    match_req = ofp.match(match_list)
+
+    # instructions
+    instruction_req = []
     instruction_req.append(ofp.instruction.apply_actions(apply_action_list))
+    if metadata is not None:
+        instruction_req.append(ofp.instruction.write_metadata(metadata))
+    if goto_table is not None:
+        instruction_req.append(ofp.instruction.goto_table(goto_table))
 
     # update command settings
     for item in flow_mod_setting.keys():
