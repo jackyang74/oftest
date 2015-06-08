@@ -85,6 +85,35 @@ class MatchTest(base_tests.SimpleDataPlane):
 
 
 @group('TestSuite50')
+class AllWildcardMatch(base_tests.SimpleDataPlane):
+    """
+    TestCase 50.10: All Wildcards
+
+    Verify for an all wildcarded flow all the injected packets would match that flow
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.10: All Wildcards")
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "apply:output={}".format(out_port1))
+
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        #check for different  match fields and verify packet implements the action specified in the flow
+        pkt1 = str(simple_tcp_packet(eth_src="00:01:01:01:01:01"))
+        self.dataplane.send(in_port, pkt1)
+        verify_packets(self, pkt1, [out_port1])
+        verify_no_packet(self, pkt1, out_port2)
+
+
+@group('TestSuite50')
 class EthDst(MatchTest):
     """
     Test Case 50.40: Ethernet destination address
@@ -1631,6 +1660,7 @@ class ArpTPASubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpTPAMasked(MatchTest):
     """
     Match on ARP target IP (arbitrarily masked)
@@ -1655,33 +1685,7 @@ class ArpTPAMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
-class AllWildcardMatch(base_tests.SimpleDataPlane):
-    """
-    TestCase 50.10: All Wildcards
 
-    Verify for an all wildcarded flow all the injected packets would match that flow
-    """
-
-    def runTest(self):
-        logging.info("Test case 50.10: All Wildcards")
-        in_port, out_port1, out_port2 = openflow_ports(3)
-
-        #Clear Switch State
-        delete_all_flows(self.controller)
-
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "apply:output={}".format(out_port1))
-
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_tcp_packet(eth_src="00:01:01:01:01:01"))
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port1])
-        verify_no_packet(self, pkt1, out_port2)
 
 
 @group('TestSuite50')
