@@ -14,7 +14,7 @@ import re
 import oftest.base_tests as base_tests
 import oftest.testutils as testutils
 from time import sleep
-
+import string
 #################### Functions for various types of flow_mod  ##########################################################################################
 
 def match_send_flowadd(self, match, priority, port):
@@ -631,9 +631,12 @@ def dpctl_cmd_to_msg(cmd):
                    "ip_src"  : ofp.oxm.ipv4_src,
                    "ip_dst"  : ofp.oxm.ipv4_dst,
                    "ip_proto": ofp.oxm.ip_proto,
+                   "vlan_vid": ofp.oxm.vlan_vid,
+                   "eth_type":ofp.oxm.eth_type,
                    }
 
     apply_action_class = {'output': ofp.action.output}
+
     cmd = re.sub("( )(\D)",'@\g<2>',cmd)
     cmd_list = cmd.split('@')
     print(cmd_list)
@@ -648,13 +651,13 @@ def dpctl_cmd_to_msg(cmd):
     goto_table = None
     for cmd_item in cmd_list[2:]:
         if cmd_item.startswith("apply"):
-            apply_action_param_str = cmd_list[3][cmd_list[3].find(":") + 1:].replace(',', ';')
+            apply_action_param_str = cmd_item[cmd_item.find(":") + 1:].replace(',', ';')
         elif cmd_item.startswith("meta"):
-            metadata = int(cmd_item[5:])
+            metadata = string.atol(cmd_item[5:], 16)
         elif cmd_item.startswith("goto"):
             goto_table = int(cmd_item[5:])
         else:
-            match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_list[2])
+            match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_item)
 
     cmd_param = {}
     match_param = {}
@@ -696,10 +699,10 @@ def dpctl_cmd_to_msg(cmd):
         instructions=instruction_req,
         buffer_id=flow_mod_setting['buffer_id'],
         out_group=flow_mod_setting['out_group'],
-        out_port=ofp.OFPP_ANY,#flow_mod_setting['out_port'],
+        out_port=flow_mod_setting['out_port'],
         priority=flow_mod_setting['prio'],
         flags=flow_mod_setting['flags']
     )
-    # print(request.show())
+    print(request.show())
     return (request,match_req,instruction_req)
 

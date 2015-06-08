@@ -44,7 +44,7 @@ class MatchTest(base_tests.SimpleDataPlane):
         # exit(0)
         logging.info("Inserting flow sending matching packets to port %d", out_port)
         request = ofp.message.flow_add(
-                table_id=table_id,
+                table_id=1,
                 match=match,
                 instructions=[
                     ofp.instruction.apply_actions(
@@ -58,7 +58,8 @@ class MatchTest(base_tests.SimpleDataPlane):
 
         logging.info("Inserting match-all flow sending packets to controller")
         request = ofp.message.flow_add(
-            table_id=table_id,
+            table_id=3,
+            # TODO
             instructions=[
                 ofp.instruction.apply_actions(
                     actions=[
@@ -111,6 +112,50 @@ class AllWildcardMatch(base_tests.SimpleDataPlane):
         self.dataplane.send(in_port, pkt1)
         verify_packets(self, pkt1, [out_port1])
         verify_no_packet(self, pkt1, out_port2)
+
+
+@group('TestSuite50')
+class InPort(base_tests.SimpleDataPlane):
+    """
+    Test case 50.20: Ingress Port
+
+    Match on ingress port
+    """
+
+    def runTest(self):
+        logging.info("Test case 50.20: Ingress Port")
+
+        delete_all_flows(self.controller)
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        # flow add
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
+                                                   "apply:output={}".format(in_port,out_port))
+        self.controller.message_send(request)
+
+        #flow add to controller
+        logging.info("Inserting match-all flow sending packets to controller")
+        request = ofp.message.flow_add(
+            table_id=3,
+            instructions=[
+                ofp.instruction.apply_actions(
+                    actions=[
+                        ofp.action.output(
+                            port=ofp.OFPP_CONTROLLER,
+                            max_len=ofp.OFPCML_NO_BUFFER)])],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1)
+        self.controller.message_send(request)
+        do_barrier(self.controller)
+
+        pktstr = str(simple_tcp_packet())
+        logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
+        self.dataplane.send(in_port, pktstr)
+        verify_packets(self, pktstr, [out_port])
+
+        logging.info("Sending packet on non-matching ingress port, expecting packet-in")
+        self.dataplane.send(bad_port, pktstr)
+        verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
 
 
 @group('TestSuite50')
@@ -206,11 +251,20 @@ class EthDstMasked(MatchTest):
 @group('TestSuite50')
 class EthSrc(MatchTest):
     """
-    Test Case 50.30: Ethernet source address
+    TestCase 50.30: Ethernet source address
 
     Match on ethernet source
     """
     def runTest(self):
+        logging.info("TestCase 50.30: Ethernet source address")
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
+                                                   "meta:0x300000000")
+
+        self.controller.message_send(request)
+        flow_stats = get_flow_stats(self, ofp.match())
+        for en in flow_stats:
+            print(en.show())
+        # exit()
         match = ofp.match([
             ofp.oxm.eth_src([0,1,2,3,4,5])
         ])
@@ -1689,49 +1743,6 @@ class ArpTPAMasked(MatchTest):
 
 
 @group('TestSuite50')
-class InPort(base_tests.SimpleDataPlane):
-    """
-
-    Match on ingress port
-    """
-    def runTest(self):
-        logging.info("Test case 50.20: Ingress Port")
-
-        delete_all_flows(self.controller)
-        in_port, out_port, bad_port = openflow_ports(3)
-
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
-                                                   "apply:output={}".format(in_port,out_port))
-        self.controller.message_send(request)
-
-        #flow add to controller
-        logging.info("Inserting match-all flow sending packets to controller")
-        request = ofp.message.flow_add(
-            table_id=0,
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=1)
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        pkt = simple_tcp_packet()
-        pktstr = str(pkt)
-        logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
-        self.dataplane.send(in_port, pktstr)
-        verify_packets(self, pktstr, [out_port])
-
-        logging.info("Sending packet on non-matching ingress port, expecting packet-in")
-        self.dataplane.send(bad_port, pktstr)
-        verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
-
-
-@group('TestSuite50')
 class L2(base_tests.SimpleDataPlane):
     """
     TestCase 50.140: L2
@@ -1748,17 +1759,17 @@ class L2(base_tests.SimpleDataPlane):
 
         # flow add
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x300000000))
+                                                   "meta:0x300000000")
 
         self.controller.message_send(request)
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta={}".format(0x400000000))
+                                                   "meta:0x400000000")
 
         self.controller.message_send(request)
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
                                                    "in_port={},eth_dst={} "
                                                    "meta:0x2 goto:1".
-                                                   format(in_port,[0x00, 0x00, 0x00, 0x00, 0x00, 0x44]))
+                                                   format(in_port, [0x00, 0x00, 0x00, 0x00, 0x00, 0x44]))
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
@@ -1767,15 +1778,15 @@ class L2(base_tests.SimpleDataPlane):
                                                    format([0x00, 0x00, 0x00, 0x00, 0x00, 0x33]))
         self.controller.message_send(request)
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
                                                    "eth_type=0x0800,meta=0x2 "
                                                    "apply:output={}".format(out_port))
         self.controller.message_send(request)
         do_barrier(self.controller)
 
         #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_tcp_packet(eth_src="00:00:00:00:00:44",
-                                     eth_dst="00:00:00:00:00:33",
+        pkt1 = str(simple_tcp_packet(eth_src="00:00:00:00:00:33",
+                                     eth_dst="00:00:00:00:00:44",
                                      dl_vlan_enable=True,
                                      vlan_vid= 2,
                                      ))
