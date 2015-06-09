@@ -41,7 +41,10 @@ class MatchTest(base_tests.SimpleDataPlane):
         logging.info("Running match test for %s", match.show())
 
         delete_all_flows(self.controller)
-        # exit(0)
+
+        for item in match:
+            print(str(item.__class__))
+
         logging.info("Inserting flow sending matching packets to port %d", out_port)
         request = ofp.message.flow_add(
                 table_id=1,
@@ -167,6 +170,7 @@ class EthDst(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x0),
             ofp.oxm.eth_dst([0x00, 0x01, 0x02, 0x03, 0x04, 0x05])
         ])
 
@@ -261,6 +265,7 @@ class EthSrc(MatchTest):
         self.controller.message_send(request)
 
         match = ofp.match([
+            ofp.oxm.metadata(0x300000000),
             ofp.oxm.eth_src([0,1,2,3,4,5])
         ])
 
