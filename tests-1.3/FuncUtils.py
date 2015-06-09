@@ -632,7 +632,7 @@ def dpctl_cmd_to_msg(cmd):
                    "ip_dst"  : ofp.oxm.ipv4_dst,
                    "ip_proto": ofp.oxm.ip_proto,
                    "vlan_vid": ofp.oxm.vlan_vid,
-                   "eth_type":ofp.oxm.eth_type,
+                   "eth_type": ofp.oxm.eth_type,
                    }
 
     apply_action_class = {'output': ofp.action.output}
@@ -650,11 +650,11 @@ def dpctl_cmd_to_msg(cmd):
     metadata = None
     goto_table = None
     for cmd_item in cmd_list[2:]:
-        if cmd_item.startswith("apply"):
+        if cmd_item.startswith("apply:"):
             apply_action_param_str = cmd_item[cmd_item.find(":") + 1:].replace(',', ';')
-        elif cmd_item.startswith("meta"):
+        elif cmd_item.startswith("meta:"):
             metadata = string.atol(cmd_item[5:], 16)
-        elif cmd_item.startswith("goto"):
+        elif cmd_item.startswith("goto:"):
             goto_table = int(cmd_item[5:])
         else:
             match_param_str = re.sub("(,)([a-zA-Z_])",';\g<2>',cmd_item)
@@ -704,5 +704,4 @@ def dpctl_cmd_to_msg(cmd):
         flags=flow_mod_setting['flags']
     )
     print(request.show())
-    return (request,match_req,instruction_req)
-
+    return request, match_req, instruction_req

@@ -257,14 +257,9 @@ class EthSrc(MatchTest):
     """
     def runTest(self):
         logging.info("TestCase 50.30: Ethernet source address")
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
-                                                   "meta:0x300000000")
-
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta=0x300000000")
         self.controller.message_send(request)
-        flow_stats = get_flow_stats(self, ofp.match())
-        for en in flow_stats:
-            print(en.show())
-        # exit()
+
         match = ofp.match([
             ofp.oxm.eth_src([0,1,2,3,4,5])
         ])
