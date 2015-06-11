@@ -42,8 +42,12 @@ class MatchTest(base_tests.SimpleDataPlane):
 
         delete_all_flows(self.controller)
 
-        for item in match:
-            print(str(item.__class__))
+        # find metadata, and set the matching field
+        for item in match.oxm_list:
+            if isinstance(item, ofp.oxm.metadata):
+                request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta={}".format(item.value))
+                self.controller.message_send(request)
+                match.oxm_list.remove(item)
 
         logging.info("Inserting flow sending matching packets to port %d", out_port)
         request = ofp.message.flow_add(
@@ -62,7 +66,7 @@ class MatchTest(base_tests.SimpleDataPlane):
         logging.info("Inserting match-all flow sending packets to controller")
         request = ofp.message.flow_add(
             table_id=3,
-            # TODO
+            # TODO find a proper way to specify the soft table number
             instructions=[
                 ofp.instruction.apply_actions(
                     actions=[
@@ -261,8 +265,7 @@ class EthSrc(MatchTest):
     """
     def runTest(self):
         logging.info("TestCase 50.30: Ethernet source address")
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta=0x300000000")
-        self.controller.message_send(request)
+
 
         match = ofp.match([
             ofp.oxm.metadata(0x300000000),
@@ -350,12 +353,14 @@ class EthSrcMasked(MatchTest):
 @group('TestSuite50')
 class EthTypeIPv4(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type
+    TestCase 50.50: Ethernet frame type(IPv4)
 
     Match on ethertype (IPv4)
     """
+
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800)
         ])
 
@@ -375,13 +380,13 @@ class EthTypeIPv4(MatchTest):
             "ipv4/udp": simple_udp_packet(),
             "ipv4/icmp": simple_icmp_packet(),
             "vlan tagged": simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2, vlan_pcp=3),
-            "llc/snap": snap_pkt,
+            # "llc/snap": snap_pkt,
         }
 
         nonmatching = {
             "arp": simple_arp_packet(),
-            "llc": llc_pkt,
             "ipv6/tcp": simple_tcpv6_packet(),
+            # "llc": llc_pkt,
         }
 
         self.verify_match(match, matching, nonmatching)
@@ -390,12 +395,13 @@ class EthTypeIPv4(MatchTest):
 @group('TestSuite50')
 class EthTypeIPv6(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type
+    TestCase 50.50: Ethernet frame type(IPv6)
 
     Match on ethertype (IPv6)
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x86dd)
         ])
 
@@ -417,12 +423,13 @@ class EthTypeIPv6(MatchTest):
 @group('TestSuite50')
 class EthTypeARP(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type
+    TestCase 50.50: Ethernet frame type(ARP)
 
     Match on ethertype (ARP)
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0806)
         ])
 
@@ -442,10 +449,13 @@ class EthTypeARP(MatchTest):
 @group('TestSuite50')
 class EthTypeNone(MatchTest):
     """
+    TestCase 50.50: Ethernet frame type(None)
+
     Match on no ethertype (IEEE 802.3 without SNAP header)
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x200000000),
             ofp.oxm.eth_type(0x05ff)
         ])
 
@@ -461,7 +471,7 @@ class EthTypeNone(MatchTest):
             scapy.LLC(dsap=0xaa, ssap=0xab, ctrl=0x03)
 
         matching = {
-            "llc": llc_pkt,
+            # "llc": llc_pkt,
         }
 
         nonmatching = {
@@ -501,10 +511,12 @@ class VlanExact(MatchTest):
 class VlanVID(MatchTest):
     """
     TestCase 50.60: Input VLAN id
+
     Match on VLAN VID
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x300000000),
             ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
         ])
 
@@ -555,6 +567,7 @@ class VlanPCP(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x300000000),
             ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
             ofp.oxm.vlan_pcp(3),
         ])
@@ -671,6 +684,7 @@ class IPv4Dscp(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_dscp(4),
         ])
@@ -765,6 +779,7 @@ class IPv4ProtoTCP(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(6),
         ])
@@ -805,12 +820,13 @@ class IPv6ProtoTCP(MatchTest):
 @group('TestSuite50')
 class IPv4ProtoUDP(MatchTest):
     """
-    TestCase 50.100.1: OP protocol(UDP type)
+    TestCase 50.100.2: OP protocol(UDP type)
 
     Match on ipv4 protocol field (UDP)
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(17),
         ])
@@ -851,12 +867,13 @@ class IPv6ProtoUDP(MatchTest):
 @group('TestSuite50')
 class IPv4ProtoICMP(MatchTest):
     """
-    TestCase 50.100.1: OP protocol(ICMP type)
+    TestCase 50.100.3: OP protocol(ICMP type)
 
     Match on ipv4 protocol field (ICMP)
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(1),
         ])
@@ -894,7 +911,7 @@ class IPv6ProtoICMP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+
 class IPv4Src(MatchTest):
     """
     TestCase 50.80: IP source address
@@ -903,12 +920,13 @@ class IPv4Src(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
+            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
-            ofp.oxm.ipv4_src(0xc0a80001), # 192.168.0.1
+            ofp.oxm.ipv4_src(0xc0a80a01), # 192.168.10.1
         ])
 
         matching = {
-            "192.168.0.1": simple_tcp_packet(ip_src='192.168.0.1'),
+            "192.168.0.1": simple_tcp_packet(ip_src='192.168.10.1'),
         }
 
         nonmatching = {
@@ -918,15 +936,17 @@ class IPv4Src(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@group('TestSuite50')
 class IPv4SrcSubnetMasked(MatchTest):
     """
     Match on ipv4 source address (subnet masked)
     """
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.metadata(0x400000000),
             # 192.168.0.0/20 (255.255.240.0)
-            ofp.oxm.ipv4_src_masked(0xc0a80000, 0xfffff000),
+            ofp.oxm.ipv4_src_masked(0xc0a80000, 0xff0f0000),
         ])
 
         matching = {
@@ -978,38 +998,46 @@ class IPv4Dst(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.metadata(0x100000000),
+            # ofp.oxm.eth_type(0x0800),
             ofp.oxm.ipv4_dst(0xc0a80001), # 192.168.0.1
         ])
 
         matching = {
-            "192.168.0.1": simple_tcp_packet(ip_dst='192.168.0.1'),
+            "192.168.0.1": simple_tcp_packet(ip_dst='192.168.0.1',ip_src='192.168.1.1'),
         }
 
         nonmatching = {
-            "192.168.0.2": simple_tcp_packet(ip_dst='192.168.0.2'),
+            "192.168.0.2": simple_tcp_packet(ip_dst='192.168.0.2',ip_src='192.168.1.1'),
             "255.255.255.255": simple_tcp_packet(ip_dst='255.255.255.255'),
         }
 
         self.verify_match(match, matching, nonmatching)
 
+
+@group('TestSuite50')
 class IPv4DstSubnetMasked(MatchTest):
     """
+    TestCase 50.90: IP destination address
+
     Match on ipv4 destination address (subnet masked)
     """
     def runTest(self):
+        flow_stats = get_flow_stats(self, ofp.match())
+        for en in flow_stats:
+            print(en.show())
+        # exit()
         match = ofp.match([
-            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.metadata(0x100000000),
+            # ofp.oxm.eth_type(0x0800),
             # 192.168.0.0/20 (255.255.240.0)
-            ofp.oxm.ipv4_dst_masked(0xc0a80000, 0xfffff000),
+            ofp.oxm.ipv4_dst_masked(0xc0a80000, 0xFF000000),
         ])
 
         matching = {
             "192.168.0.1": simple_tcp_packet(ip_dst='192.168.0.1'),
             "192.168.0.2": simple_tcp_packet(ip_dst='192.168.0.2'),
-            "192.168.4.2": simple_tcp_packet(ip_dst='192.168.4.2'),
             "192.168.0.0": simple_tcp_packet(ip_dst='192.168.0.0'),
-            "192.168.15.255": simple_tcp_packet(ip_dst='192.168.15.255'),
         }
 
         nonmatching = {
@@ -1219,8 +1247,7 @@ class IPv4TCPSrc(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.eth_type(0x0800),
-            ofp.oxm.ip_proto(6),
+            ofp.oxm.metadata(0x100000000),
             ofp.oxm.tcp_src(53),
         ])
 
@@ -1230,7 +1257,7 @@ class IPv4TCPSrc(MatchTest):
 
         nonmatching = {
             "tcp sport=52": simple_tcp_packet(tcp_sport=52),
-            "udp sport=53": simple_udp_packet(udp_sport=53),
+            # "udp sport=53": simple_udp_packet(udp_sport=53),
         }
 
         self.verify_match(match, matching, nonmatching)
@@ -1291,8 +1318,9 @@ class IPv4TCPDst(MatchTest):
     """
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.eth_type(0x0800),
-            ofp.oxm.ip_proto(6),
+            ofp.oxm.metadata(0x100000000),
+            # ofp.oxm.eth_type(0x0800),
+            # ofp.oxm.ip_proto(6),
             ofp.oxm.tcp_dst(53),
         ])
 
@@ -1302,7 +1330,7 @@ class IPv4TCPDst(MatchTest):
 
         nonmatching = {
             "tcp dport=52": simple_tcp_packet(tcp_dport=52),
-            "udp dport=53": simple_udp_packet(udp_dport=53),
+            # "udp dport=53": simple_udp_packet(udp_dport=53),
         }
 
         self.verify_match(match, matching, nonmatching)
@@ -1754,22 +1782,27 @@ class L2(base_tests.SimpleDataPlane):
         logging.info("Test case 50.140: L2")
         in_port, out_port, bad_port = openflow_ports(3)
 
+        flow_stats = get_flow_stats(self, ofp.match())
+        for en in flow_stats:
+            print(en.show())
+        # exit()
+
         #Clear Switch State
         delete_all_flows(self.controller)
 
         # flow add
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta:0x300000000")
+                                                   "meta=0x300000000")
 
         self.controller.message_send(request)
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta:0x400000000")
+                                                   "meta=0x400000000")
 
         self.controller.message_send(request)
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
                                                    "in_port={},eth_dst={} "
                                                    "meta:0x2 goto:1".
-                                                   format(in_port, [0x00, 0x00, 0x00, 0x00, 0x00, 0x44]))
+                                                   format(in_port, [0x01, 0x23, 0x45, 0x67, 0x89, 0x44]))
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
@@ -1786,7 +1819,7 @@ class L2(base_tests.SimpleDataPlane):
 
         #check for different  match fields and verify packet implements the action specified in the flow
         pkt1 = str(simple_tcp_packet(eth_src="00:00:00:00:00:33",
-                                     eth_dst="00:00:00:00:00:44",
+                                     eth_dst="01:23:45:67:89:44",
                                      dl_vlan_enable=True,
                                      vlan_vid= 2,
                                      ))
