@@ -46,8 +46,8 @@ class MatchTest(base_tests.SimpleDataPlane):
         for item in match.oxm_list:
             if isinstance(item, ofp.oxm.metadata):
                 request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta={}".format(item.value))
-                # self.controller.message_send(request)
-                # match.oxm_list.remove(item)
+                self.controller.message_send(request)
+                match.oxm_list.remove(item)
 
         logging.info("Inserting flow sending matching packets to port %d", out_port)
         request = ofp.message.flow_add(
@@ -61,7 +61,7 @@ class MatchTest(base_tests.SimpleDataPlane):
                                 max_len=ofp.OFPCML_NO_BUFFER)])],
                 buffer_id=ofp.OFP_NO_BUFFER,
                 priority=15)
-        # self.controller.message_send(request)
+        self.controller.message_send(request)
 
         logging.info("Inserting match-all flow sending packets to controller")
         request = ofp.message.flow_add(
@@ -75,7 +75,7 @@ class MatchTest(base_tests.SimpleDataPlane):
                             max_len=ofp.OFPCML_NO_BUFFER)])],
             buffer_id=ofp.OFP_NO_BUFFER,
             priority=1)
-        # self.controller.message_send(request)
+        self.controller.message_send(request)
 
         do_barrier(self.controller)
 
@@ -1801,16 +1801,12 @@ class L2(base_tests.SimpleDataPlane):
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
                                                    "eth_src={},meta=0x2,vlan_vid=2 "
-                                                   "meta:0x2 goto:2".
+                                                   "meta:0x3 goto:2".
                                                    format([0x33, 0x00, 0x00, 0x00, 0x00, 0x33]))
-        # request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-        #                                            "eth_src={},meta=0x2,vlan_vid=2 "
-        #                                            "apply:output={}".
-        #                                            format([0x33, 0x00, 0x00, 0x00, 0x00, 0x33],out_port))
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
-                                                   "eth_type=0x0800,meta=0x2 "
+                                                   "eth_type=0x0800,meta=0x13 "
                                                    "apply:output={}".format(out_port))
         self.controller.message_send(request)
         do_barrier(self.controller)
