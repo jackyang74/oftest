@@ -633,6 +633,8 @@ def dpctl_cmd_to_msg(cmd):
                    "ip_proto": ofp.oxm.ip_proto,
                    "vlan_vid": ofp.oxm.vlan_vid,
                    "eth_type": ofp.oxm.eth_type,
+                   "tcp_src" : ofp.oxm.tcp_src,
+                   "tcp_dst" : ofp.oxm.tcp_dst,
                    }
 
     apply_action_class = {'output': ofp.action.output}
@@ -703,5 +705,5 @@ def dpctl_cmd_to_msg(cmd):
         priority=flow_mod_setting['prio'],
         flags=flow_mod_setting['flags']
     )
-    print(request.show())
+    # print(request.show())
     return request, match_req, instruction_req

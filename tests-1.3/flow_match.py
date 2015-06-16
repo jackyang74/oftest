@@ -46,8 +46,8 @@ class MatchTest(base_tests.SimpleDataPlane):
         for item in match.oxm_list:
             if isinstance(item, ofp.oxm.metadata):
                 request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta={}".format(item.value))
-                self.controller.message_send(request)
-                match.oxm_list.remove(item)
+                # self.controller.message_send(request)
+                # match.oxm_list.remove(item)
 
         logging.info("Inserting flow sending matching packets to port %d", out_port)
         request = ofp.message.flow_add(
@@ -61,7 +61,7 @@ class MatchTest(base_tests.SimpleDataPlane):
                                 max_len=ofp.OFPCML_NO_BUFFER)])],
                 buffer_id=ofp.OFP_NO_BUFFER,
                 priority=15)
-        self.controller.message_send(request)
+        # self.controller.message_send(request)
 
         logging.info("Inserting match-all flow sending packets to controller")
         request = ofp.message.flow_add(
@@ -75,7 +75,7 @@ class MatchTest(base_tests.SimpleDataPlane):
                             max_len=ofp.OFPCML_NO_BUFFER)])],
             buffer_id=ofp.OFP_NO_BUFFER,
             priority=1)
-        self.controller.message_send(request)
+        # self.controller.message_send(request)
 
         do_barrier(self.controller)
 
@@ -940,6 +940,8 @@ class IPv4Src(MatchTest):
 @group('TestSuite50')
 class IPv4SrcSubnetMasked(MatchTest):
     """
+    Test case 50.80: IP source address (uint32_t nw_src)
+
     Match on ipv4 source address (subnet masked)
     """
     def runTest(self):
@@ -989,10 +991,8 @@ class IPv4SrcMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
 class IPv4Dst(MatchTest):
     """
-    TestCase 50.90: IP destination address
 
     Match on ipv4 destination address
     """
@@ -1023,10 +1023,6 @@ class IPv4DstSubnetMasked(MatchTest):
     Match on ipv4 destination address (subnet masked)
     """
     def runTest(self):
-        flow_stats = get_flow_stats(self, ofp.match())
-        for en in flow_stats:
-            print(en.show())
-        # exit()
         match = ofp.match([
             ofp.oxm.metadata(0x100000000),
             # ofp.oxm.eth_type(0x0800),
@@ -1787,6 +1783,7 @@ class L2(base_tests.SimpleDataPlane):
             print(en.show())
         # exit()
 
+
         #Clear Switch State
         delete_all_flows(self.controller)
 
@@ -1802,13 +1799,17 @@ class L2(base_tests.SimpleDataPlane):
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
                                                    "in_port={},eth_dst={} "
                                                    "meta:0x2 goto:1".
-                                                   format(in_port, [0x01, 0x23, 0x45, 0x67, 0x89, 0x44]))
+                                                   format(in_port, [0x01, 0x0, 0x0, 0x0, 0x0, 0x1]))
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
                                                    "eth_src={},meta=0x2,vlan_vid=2 "
                                                    "meta:0x2 goto:2".
-                                                   format([0x00, 0x00, 0x00, 0x00, 0x00, 0x33]))
+                                                   format([0x33, 0x00, 0x00, 0x00, 0x00, 0x33]))
+        # request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+        #                                            "eth_src={},meta=0x2,vlan_vid=2 "
+        #                                            "apply:output={}".
+        #                                            format([0x33, 0x00, 0x00, 0x00, 0x00, 0x33],out_port))
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
@@ -1818,8 +1819,8 @@ class L2(base_tests.SimpleDataPlane):
         do_barrier(self.controller)
 
         #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_tcp_packet(eth_src="00:00:00:00:00:33",
-                                     eth_dst="01:23:45:67:89:44",
+        pkt1 = str(simple_tcp_packet(eth_src="33:00:00:00:00:33",
+                                     eth_dst="01:00:00:00:00:01",
                                      dl_vlan_enable=True,
                                      vlan_vid= 2,
                                      ))
@@ -1998,10 +1999,24 @@ class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
     """
     def runTest(self):
         logging.info("Test case 50.200: Fragments wildcard TCP Port")
-        in_port, out_port1, out_port2 = openflow_ports(3)
-        #Clear Switch State
+        in_port, out_port, bad_port = openflow_ports(3)
+
+        # Clear Switch State
         delete_all_flows(self.controller)
-        # TODO
+
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+                                                   "meta={}".format(0x100000000))
+        self.controller.message_send(request)
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                                   "in_port={} "
+                                                   "meta:0x2 goto:1".
+                                                   format(in_port))
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "tcp_src={},meta=0x2 "
+                                                   "apply:output={}".
+                                                   format(100,200))
+
+
 
 
 @group('TestSuite50')
@@ -2011,17 +2026,17 @@ class IPSourceAddrARP(base_tests.SimpleDataPlane):
     """
     def runTest(self):
         logging.info("Test case 50.210: IP source address of ARP packets")
-        in_port, out_port1, out_port2 = openflow_ports(3)
+        in_port, out_port, bad_port = openflow_ports(3)
 
          #Clear Switch State
         delete_all_flows(self.controller)
 
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
                                                    "meta={}".format(0x400000000))
         self.controller.message_send(request)
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
                                                    "ip_src={},eth_type=0x0806,meta=0x3 "
                                                    "apply:output={}".format(0xc0a80101,out_port))
         self.controller.message_send(request)
