@@ -1763,9 +1763,6 @@ class ArpTPAMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-
-
-
 @group('TestSuite50')
 class L2(base_tests.SimpleDataPlane):
     """
@@ -1999,7 +1996,7 @@ class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
     """
     def runTest(self):
         logging.info("Test case 50.200: Fragments wildcard TCP Port")
-        in_port, out_port, bad_port = openflow_ports(3)
+        in_port, out_port1, bad_port = openflow_ports(3)
 
         # Clear Switch State
         delete_all_flows(self.controller)
@@ -2037,11 +2034,11 @@ class IPSourceAddrARP(base_tests.SimpleDataPlane):
         self.controller.message_send(request)
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "ip_src={},eth_type=0x0806,meta=0x3 "
+                                                   "ip_src={},eth_type=0x0806 "
                                                    "apply:output={}".format(0xc0a80101,out_port))
         self.controller.message_send(request)
 
-        pkt1 = str(simple_arp_packet(ip_snd="192.168.1.2"))
+        pkt1 = str(simple_arp_packet(ip_snd="192.168.1.1"))
         self.dataplane.send(in_port, pkt1)
         verify_packets(self, pkt1, [out_port])
         verify_no_packet(self, pkt1, bad_port)
@@ -2071,24 +2068,24 @@ class IPDestAddrARP(base_tests.SimpleDataPlane):
         delete_all_flows(self.controller)
 
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=0 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
                                                    "meta={}".format(0x100000000))
         self.controller.message_send(request)
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
                                                    "meta={}".format(0x200000000))
         self.controller.message_send(request)
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "ip_dst={},meta=0x3 goto:1".format(0xc0a80101))
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+                                                   "ip_dst={} meta:0x3 goto:1".format(0xc0a80101))
         self.controller.message_send(request)
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
+        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
                                                    "eth_type=0x0806,meta=0x3 "
                                                    "apply:output={}".format(out_port))
         self.controller.message_send(request)
 
-        pkt1 = str(simple_arp_packet(ip_tgt="192.168.1.2"))
+        pkt1 = str(simple_arp_packet(ip_tgt="192.168.1.1"))
         self.dataplane.send(in_port, pkt1)
         verify_packets(self, pkt1, [out_port])
         verify_no_packet(self, pkt1, bad_port)
