@@ -236,13 +236,53 @@ class PortTransmitDrops(base_tests.SimpleDataPlane):
         self.controller.message_send(request)
 
 
-        for i in range(10):
-            time.sleep(0.1)
-            print(time.time())
+        # TODO:OSNT
+        # verify_port_stats(self, out_port, tx_bytes = pkt_num *len(pkt))
 
-        pkt_num = 10
-        pkt = str(simple_tcp_packet())
-        for i in range(pkt_num):
-            self.dataplane.send(in_port, pkt)
 
-        verify_port_stats(self, out_port, tx_bytes = pkt_num *len(pkt))
+@group('TestSuite60')
+class CRCErrors(base_tests.SimpleDataPlane):
+    """
+    TestCase 60.150: CRCErrors
+
+    """
+    def runTest(self):
+        logging.info("Test case 60.100: Port Receive drops")
+        in_port, out_port = openflow_ports(2)
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        # TODO: send CRC error packets
+
+
+@group('TestSuite60')
+class ActiveEntries(base_tests.SimpleDataPlane):
+    """
+    TestCase 60.200 Active Entries
+
+
+    """
+    def runTest(self):
+        logging.info("")
+        flow_stats = get_flow_stats(self, ofp.match())
+        print("entry={}".format(len(flow_stats)))
+        in_port, out_port = openflow_ports(2)
+        #Clear Switch State
+        delete_all_flows(self.controller)
+
+        flow_entry_num = 10
+        table_num = 5
+        for i in range(table_num):
+            for j in range(flow_entry_num):
+                request,_,_ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table={},prio={} "
+                                                     "in_port={} apply:output={}".format(i, j, in_port, out_port))
+                self.controller.message_send(request)
+
+        request = ofp.message.table_stats_request()
+        (reply , pkt) = self.controller.transact(request)
+
+        active_entry = 0
+        print(len(reply.entries))
+        for obj in reply.entries:
+            active_entry += obj.active_count
+        self.seertEqual(flow_entry_num*table_num, active_entry, "Active entry error")
