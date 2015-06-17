@@ -259,7 +259,7 @@ class CRCErrors(base_tests.SimpleDataPlane):
 class ActiveEntries(base_tests.SimpleDataPlane):
     """
     TestCase 60.200 Active Entries
-    
+
 
     """
     def runTest(self):
