@@ -249,6 +249,7 @@ class CRCErrors(base_tests.SimpleDataPlane):
     def runTest(self):
         logging.info("Test case 60.100: Port Receive drops")
         in_port, out_port = openflow_ports(2)
+
         #Clear Switch State
         delete_all_flows(self.controller)
 
@@ -260,12 +261,10 @@ class ActiveEntries(base_tests.SimpleDataPlane):
     """
     TestCase 60.200 Active Entries
 
-
     """
     def runTest(self):
         logging.info("")
         flow_stats = get_flow_stats(self, ofp.match())
-        print("entry={}".format(len(flow_stats)))
         in_port, out_port = openflow_ports(2)
         #Clear Switch State
         delete_all_flows(self.controller)

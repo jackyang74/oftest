@@ -18,7 +18,73 @@ from loxi.pp import pp
 
 from oftest.testutils import *
 from oftest.parse import parse_ipv6
+import FuncUtils
 
+@group("TestSuite70")
+class NoActionDrops(base_tests.SimpleDataPlane):
+    """
+    TestCase 70.10: No action drops packet
+    """
+    def runTest(self):
+        logging.info("TestCase 70.10: No action drops packet")
+        # delete all entries
+        delete_all_flows(self.controller)
+
+        in_port, out_port = openflow_ports(2)
+        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                             "in_port={}".format(in_port))
+        self.controller.message_send(request)
+
+        pkt_num  = 10
+        pkt = str(simple_tcp_packet())
+        for i in range(10):
+            self.dataplane.send(in_port, pkt)
+
+        verify_no_packet(self, pktstr, out_port)
+        verify_flow_stats(self, match, table_id=0, pkts= pkt_num)
+
+
+@group("TestSuite70")
+class ForwardALL(base_tests.SimpleDataPlane):
+    """
+    TestCase 70.30: Forward: ALL
+    """
+    def runTest(self):
+        logging.info("TestCase 70.30: Forward: ALL")
+        # delete all entries
+        delete_all_flows(self.controller)
+
+        in_port, out_port = openflow_ports(2)
+        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                             "in_port={} apply:output={}".format(in_port,ofp.OFPP_ALL))
+        self.controller.message_send(request)
+
+
+@group("TestSuite70")
+class ForwardController(base_tests.SimpleDataPlane):
+    """
+    TestCase 70.40: Forward: Controller
+    """
+    def runTest(self):
+        logging.info("TestCase 70.30: Forward: Controller")
+        # delete all entries
+        delete_all_flows(self.controller)
+
+        in_port, out_port = openflow_ports(2)
+        request = ofp.message.flow_add(
+            table_id=3,
+            instructions=[
+                ofp.instruction.apply_actions(
+                    actions=[
+                        ofp.action.output(
+                            port=ofp.OFPP_CONTROLLER,
+                            max_len=ofp.OFPCML_NO_BUFFER)])],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1)
+        self.controller.message_send(request)
+
+
+@group("TestSuite70")
 class Output(base_tests.SimpleDataPlane):
     """
     Output to a single port
