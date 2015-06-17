@@ -608,7 +608,7 @@ def dpctl_cmd_to_msg(cmd):
     """
     # constants
     # logging.info("Excute cmd:" + cmd)
-    print("Excute cmd:" + cmd)
+    # print("Excute cmd:" + cmd)
     flow_mod_class = {'add': ofp.message.flow_add,
                       'del': ofp.message.flow_delete,
                       'dels': ofp.message.flow_delete_strict,
@@ -641,7 +641,7 @@ def dpctl_cmd_to_msg(cmd):
 
     cmd = re.sub("( )(\D)",'@\g<2>',cmd)
     cmd_list = cmd.split('@')
-    print(cmd_list)
+    # print(cmd_list)
 
     match_param_str = None
     apply_action_param_str = None
