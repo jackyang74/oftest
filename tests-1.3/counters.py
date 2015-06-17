@@ -46,14 +46,12 @@ class FlowReceivedPackets(base_tests.SimpleDataPlane):
 
 @group('TestSuite60')
 class FlowReceivedBytes(base_tests.SimpleDataPlane):
-    """
-    TestCase 60.10: Flow Received Packets
+    """ 
+    TestCase 60.10: Flow Received Bytes
 
-    Verify that the packet_count counter in the Flow-stats reply increments
-    in accordance with packets received.
     """
     def runTest(self):
-        logging.info("TestCase 60.20: Flow Received Packets")
+        logging.info("TestCase 60.20: Flow Received Bytes")
         in_port, out_port = openflow_ports(2)
         #Clear Switch State
         delete_all_flows(self.controller)
@@ -146,7 +144,7 @@ class PortReceivedPackets(base_tests.SimpleDataPlane):
 
 
 @group('TestSuite60')
-class PortReceivedPackets(base_tests.SimpleDataPlane):
+class PortTransmittedPackets(base_tests.SimpleDataPlane):
     """
     Test case 60.60: Transmitted Packets
 
