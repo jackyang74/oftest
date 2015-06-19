@@ -50,14 +50,20 @@ class ForwardALL(base_tests.SimpleDataPlane):
     TestCase 70.30: Forward: ALL
     """
     def runTest(self):
-        logging.info("TestCase 70.30: Forward: ALL")
         # delete all entries
         delete_all_flows(self.controller)
 
-        in_port, out_port = openflow_ports(2)
+        in_port, out_port1, out_port2 = openflow_ports(3)
         request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
                                              "in_port={} apply:output={}".format(in_port,ofp.OFPP_ALL))
         self.controller.message_send(request)
+
+        # send packets
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+
+        verify_no_packet(self, pkt, in_port)
+        verify_packets(self, pkt, [out_port1, out_port2])
 
 
 @group("TestSuite70")
@@ -82,6 +88,63 @@ class ForwardController(base_tests.SimpleDataPlane):
             buffer_id=ofp.OFP_NO_BUFFER,
             priority=1)
         self.controller.message_send(request)
+
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+        verify_packet_in(self, pkt, in_port, ofp.OFPR_ACTION)
+
+
+class ForwardTable(base_tests.SimpleDataPlane):
+
+    """ForwardTable : Perform actions in flow table. Only for packet-out messages.
+        If the output action.port in the packetout message = OFP.TABLE , then
+        the packet implements the action specified in the matching flow of the FLOW-TABLE"""
+
+    def runTest(self):
+
+        logging.info("Running Forward_Table test")
+
+        # delete all entries
+        delete_all_flows(self.controller)
+        in_port, out_port = openflow_ports(2)
+        # add flow
+        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                             "in_port={} apply:output={}".format(in_port,out_port))
+        self.controller.message_send(request)
+
+        pkt = str(simple_tcp_packet())
+        #Create a packet out message
+        pkt_out =ofp.message.packet_out()
+        pkt_out.data = pkt
+        pkt_out.in_port = in_port
+        pkt_out.buffer_id = ofp.OFP_NO_BUFFER
+        act = ofp.action.output()
+        act.port = ofp.OFPP_TABLE
+        pkt_out.actions.append(act)
+        self.controller.message_send(pkt_out)
+
+        #Verifying packet out message recieved on the expected dataplane port.
+        verify_packets(self, pkt, [out_port])
+
+
+class ForwardInPort(base_tests.SimpleDataPlane):
+    """
+    TestCase 70.70: Forward: InPort
+    """
+    def runTest(self):
+        # delete all entries
+        delete_all_flows(self.controller)
+
+        in_port, out_port = openflow_ports(2)
+        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                             "in_port={} apply:output={}".format(in_port,in_port))
+        self.controller.message_send(request)
+
+        # send packets
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [in_port])
+
 
 
 @group("TestSuite70")
@@ -118,7 +181,7 @@ class Output(base_tests.SimpleDataPlane):
         self.dataplane.send(in_port, pktstr)
         verify_packets(self, pktstr, [out_port])
 
-class OutputMultiple(base_tests.SimpleDataPlane):
+class ForwardOutputMultiple(base_tests.SimpleDataPlane):
     """
     Output to three ports
     """
@@ -152,6 +215,40 @@ class OutputMultiple(base_tests.SimpleDataPlane):
         logging.info("Sending packet, expecting output to ports %r", out_ports)
         self.dataplane.send(in_port, pktstr)
         verify_packets(self, pktstr, out_ports)
+
+
+class ForwardEnqueue(base_tests.SimpleDataPlane):
+
+    """ForwardTable : Perform actions in flow table. Only for packet-out messages.
+        If the output action.port in the packetout message = OFP.TABLE , then
+        the packet implements the action specified in the matching flow of the FLOW-TABLE"""
+
+    def runTest(self):
+
+        logging.info("Running Forward_Table test")
+
+        # delete all entries
+        delete_all_flows(self.controller)
+        in_port, out_port = openflow_ports(2)
+        # add flow
+        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
+                                             "in_port={} apply:output={}".format(in_port,out_port))
+        self.controller.message_send(request)
+
+        pkt = str(simple_tcp_packet())
+        #Create a packet out message
+        pkt_out =ofp.message.packet_out()
+        pkt_out.data = pkt
+        pkt_out.in_port = in_port
+        pkt_out.buffer_id = ofp.OFP_NO_BUFFER
+        act = ofp.action.output()
+        act.port = ofp.OFPP_TABLE
+        pkt_out.actions.append(act)
+        self.controller.message_send(pkt_out)
+
+        #Verifying packet out message recieved on the expected dataplane port.
+        verify_packets(self, pkt, [out_port])
+
 
 class BaseModifyPacketTest(base_tests.SimpleDataPlane):
     """
@@ -496,4 +593,15 @@ class DecIpv6HopLimit(BaseModifyPacketTest):
         actions = [ofp.action.dec_nw_ttl()]
         pkt = simple_tcpv6_packet(ipv6_hlim=10)
         exp_pkt = simple_tcpv6_packet(ipv6_hlim=9)
+        self.verify_modify(actions, pkt, exp_pkt)
+
+
+class SequentialExecution(BaseModifyPacketTest):
+    """
+    Set the vlan vid
+    """
+    def runTest(self):
+        actions = [ofp.action.set_field(ofp.oxm.vlan_vid(1), ofp.oxm.vlan_vid(2))]
+        pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=1)
+        exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2)
         self.verify_modify(actions, pkt, exp_pkt)
