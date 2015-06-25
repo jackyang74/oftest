@@ -67,14 +67,6 @@ CONFIG_DEFAULT = {
     # Switch connection options
     "controller_host"    : "0.0.0.0",  # For passive bind
     "controller_port"    : 6632,
-    "switch_ip"          : "10.0.0.12"
-                           ""
-                           ""
-                           ""
-                           ""
-                           ""
-                           "",  # If not none, actively connect to switch
-    "platform"           : "eth",
     "platform_args"      : None,
     "platform_dir"       : os.path.join(ROOT_DIR, "platforms"),
     "interfaces"         : [],
