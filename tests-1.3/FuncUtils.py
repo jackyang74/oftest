@@ -596,6 +596,27 @@ def add_simple_flow(self,table_id=0, in_port=None,out_port=None,priority=15,flag
     testutils.do_barrier(self.controller)
 
 ############################################################################################################
+def entry_mod(controller, message_class,
+              match=None,
+              instructions=None,
+              buffer_id=ofp.OFP_NO_BUFFER,
+              out_group=ofp.OFPG_ANY,
+              out_port=ofp.OFPP_ANY,
+              priority=0,
+              flags=0):
+    request = message_class(
+        table_id=cmd_param['table'],
+        match=match,
+        instructions=instructions,
+        buffer_id=buffer_id,
+        out_group=out_group,
+        out_port=out_port,
+        priority=priority,
+        flags=flags,
+    )
+    controller.message_send(request)
+
+
 def dpctl_cmd_to_msg(cmd):
     """
 
