@@ -20,7 +20,6 @@ def open_logfile(name):
     """
 
     _format = "%(asctime)s.%(msecs)03d  %(name)-10s: %(levelname)-8s: %(message)s"
-    # _format="%(asctime)s %(pathname)s %(filename)s %(funcName)s %(lineno)s %(levelname)s - %(message)s"
     _datefmt = "%H:%M:%S"
 
     if config["log_dir"] != None:
