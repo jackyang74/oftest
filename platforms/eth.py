@@ -22,7 +22,7 @@ def platform_config_update(config):
             1: 'eth1',
             2: 'eth2',
             3: 'eth3',
-            # 4: 'veth7',
+            4: 'eth4',
         }
 
     config['port_map'] = port_map
