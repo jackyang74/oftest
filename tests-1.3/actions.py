@@ -20,28 +20,30 @@ from oftest.testutils import *
 from oftest.parse import parse_ipv6
 import FuncUtils
 
+
 @group("TestSuite70")
 class NoActionDrops(base_tests.SimpleDataPlane):
     """
     TestCase 70.10: No action drops packet
     """
+
     def runTest(self):
-        logging.info("TestCase 70.10: No action drops packet")
         # delete all entries
         delete_all_flows(self.controller)
-
+        # config
         in_port, out_port = openflow_ports(2)
-        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                             "in_port={}".format(in_port))
-        self.controller.message_send(request)
-
-        pkt_num  = 10
+        request = FuncUtils.flow_entry_install(self.controller,
+                                               "flow_add",
+                                               match=ofp.match([ofp.oxm.in_port(in_port)]))
+        # tests
+        pkt_num = 10
         pkt = str(simple_tcp_packet())
         for i in range(10):
             self.dataplane.send(in_port, pkt)
 
-        verify_no_packet(self, pktstr, out_port)
-        verify_flow_stats(self, match, table_id=0, pkts= pkt_num)
+        verify_no_packet(self, pkt, out_port)
+        print(request.match.show())
+        verify_flow_stats(self, request.match, table_id=request.table_id, pkts=pkt_num)
 
 
 @group("TestSuite70")
@@ -49,21 +51,26 @@ class ForwardALL(base_tests.SimpleDataPlane):
     """
     TestCase 70.30: Forward: ALL
     """
+
     def runTest(self):
         # delete all entries
         delete_all_flows(self.controller)
 
-        in_port, out_port1, out_port2 = openflow_ports(3)
-        request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                             "in_port={} apply:output={}".format(in_port,ofp.OFPP_ALL))
-        self.controller.message_send(request)
+        # config
+        in_port, out_port1, out_port2, out_port3 = openflow_ports(4)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions(
+                                         [ofp.action.output(ofp.OFPP_ALL)])]
+                                     )
 
-        # send packets
+        # tests
         pkt = str(simple_tcp_packet())
         self.dataplane.send(in_port, pkt)
 
         verify_no_packet(self, pkt, in_port)
-        verify_packets(self, pkt, [out_port1, out_port2])
+        verify_packets(self, pkt, [out_port1, out_port2, out_port3])
 
 
 @group("TestSuite70")
@@ -71,23 +78,21 @@ class ForwardController(base_tests.SimpleDataPlane):
     """
     TestCase 70.40: Forward: Controller
     """
+
     def runTest(self):
         logging.info("TestCase 70.30: Forward: Controller")
         # delete all entries
         delete_all_flows(self.controller)
 
         in_port, out_port = openflow_ports(2)
-        request = ofp.message.flow_add(
-            table_id=3,
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=1)
-        self.controller.message_send(request)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions(
+                                         [ofp.action.output(
+                                             port=ofp.OFPP_CONTROLLER,
+                                             max_len=ofp.OFPCML_NO_BUFFER
+                                         )])])
 
         pkt = str(simple_tcp_packet())
         self.dataplane.send(in_port, pkt)
@@ -95,13 +100,11 @@ class ForwardController(base_tests.SimpleDataPlane):
 
 
 class ForwardTable(base_tests.SimpleDataPlane):
-
     """ForwardTable : Perform actions in flow table. Only for packet-out messages.
         If the output action.port in the packetout message = OFP.TABLE , then
         the packet implements the action specified in the matching flow of the FLOW-TABLE"""
 
     def runTest(self):
-
         logging.info("Running Forward_Table test")
 
         # delete all entries
@@ -109,12 +112,12 @@ class ForwardTable(base_tests.SimpleDataPlane):
         in_port, out_port = openflow_ports(2)
         # add flow
         request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                             "in_port={} apply:output={}".format(in_port,out_port))
+                                             "in_port={} apply:output={}".format(in_port, out_port))
         self.controller.message_send(request)
 
         pkt = str(simple_tcp_packet())
-        #Create a packet out message
-        pkt_out =ofp.message.packet_out()
+        # Create a packet out message
+        pkt_out = ofp.message.packet_out()
         pkt_out.data = pkt
         pkt_out.in_port = in_port
         pkt_out.buffer_id = ofp.OFP_NO_BUFFER
@@ -123,7 +126,7 @@ class ForwardTable(base_tests.SimpleDataPlane):
         pkt_out.actions.append(act)
         self.controller.message_send(pkt_out)
 
-        #Verifying packet out message recieved on the expected dataplane port.
+        # Verifying packet out message recieved on the expected dataplane port.
         verify_packets(self, pkt, [out_port])
 
 
@@ -131,13 +134,14 @@ class ForwardInPort(base_tests.SimpleDataPlane):
     """
     TestCase 70.70: Forward: InPort
     """
+
     def runTest(self):
         # delete all entries
         delete_all_flows(self.controller)
 
         in_port, out_port = openflow_ports(2)
         request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                             "in_port={} apply:output={}".format(in_port,in_port))
+                                             "in_port={} apply:output={}".format(in_port, in_port))
         self.controller.message_send(request)
 
         # send packets
@@ -146,12 +150,12 @@ class ForwardInPort(base_tests.SimpleDataPlane):
         verify_packets(self, pkt, [in_port])
 
 
-
 @group("TestSuite70")
 class Output(base_tests.SimpleDataPlane):
     """
     Output to a single port
     """
+
     def runTest(self):
         in_port, out_port = openflow_ports(2)
 
@@ -165,12 +169,12 @@ class Output(base_tests.SimpleDataPlane):
 
         logging.info("Inserting flow")
         request = ofp.message.flow_add(
-                table_id=test_param_get("table", 0),
-                match=packet_to_flow_match(self, pkt),
-                instructions=[
-                    ofp.instruction.apply_actions(actions)],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=1000)
+            table_id=test_param_get("table", 0),
+            match=packet_to_flow_match(self, pkt),
+            instructions=[
+                ofp.instruction.apply_actions(actions)],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1000)
         self.controller.message_send(request)
 
         do_barrier(self.controller)
@@ -181,10 +185,12 @@ class Output(base_tests.SimpleDataPlane):
         self.dataplane.send(in_port, pktstr)
         verify_packets(self, pktstr, [out_port])
 
+
 class ForwardOutputMultiple(base_tests.SimpleDataPlane):
     """
     Output to three ports
     """
+
     def runTest(self):
         ports = openflow_ports(4)
         in_port = ports[0]
@@ -200,12 +206,12 @@ class ForwardOutputMultiple(base_tests.SimpleDataPlane):
 
         logging.info("Inserting flow")
         request = ofp.message.flow_add(
-                table_id=test_param_get("table", 0),
-                match=packet_to_flow_match(self, pkt),
-                instructions=[
-                    ofp.instruction.apply_actions(actions)],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=1000)
+            table_id=test_param_get("table", 0),
+            match=packet_to_flow_match(self, pkt),
+            instructions=[
+                ofp.instruction.apply_actions(actions)],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1000)
         self.controller.message_send(request)
 
         do_barrier(self.controller)
@@ -218,13 +224,11 @@ class ForwardOutputMultiple(base_tests.SimpleDataPlane):
 
 
 class ForwardEnqueue(base_tests.SimpleDataPlane):
-
     """ForwardTable : Perform actions in flow table. Only for packet-out messages.
         If the output action.port in the packetout message = OFP.TABLE , then
         the packet implements the action specified in the matching flow of the FLOW-TABLE"""
 
     def runTest(self):
-
         logging.info("Running Forward_Table test")
 
         # delete all entries
@@ -232,12 +236,12 @@ class ForwardEnqueue(base_tests.SimpleDataPlane):
         in_port, out_port = openflow_ports(2)
         # add flow
         request = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                             "in_port={} apply:output={}".format(in_port,out_port))
+                                             "in_port={} apply:output={}".format(in_port, out_port))
         self.controller.message_send(request)
 
         pkt = str(simple_tcp_packet())
-        #Create a packet out message
-        pkt_out =ofp.message.packet_out()
+        # Create a packet out message
+        pkt_out = ofp.message.packet_out()
         pkt_out.data = pkt
         pkt_out.in_port = in_port
         pkt_out.buffer_id = ofp.OFP_NO_BUFFER
@@ -246,7 +250,7 @@ class ForwardEnqueue(base_tests.SimpleDataPlane):
         pkt_out.actions.append(act)
         self.controller.message_send(pkt_out)
 
-        #Verifying packet out message recieved on the expected dataplane port.
+        # Verifying packet out message recieved on the expected dataplane port.
         verify_packets(self, pkt, [out_port])
 
 
@@ -266,12 +270,12 @@ class BaseModifyPacketTest(base_tests.SimpleDataPlane):
 
         logging.info("Inserting flow")
         request = ofp.message.flow_add(
-                table_id=test_param_get("table", 0),
-                match=packet_to_flow_match(self, pkt),
-                instructions=[
-                    ofp.instruction.apply_actions(actions)],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=1000)
+            table_id=test_param_get("table", 0),
+            match=packet_to_flow_match(self, pkt),
+            instructions=[
+                ofp.instruction.apply_actions(actions)],
+            buffer_id=ofp.OFP_NO_BUFFER,
+            priority=1000)
         self.controller.message_send(request)
 
         do_barrier(self.controller)
@@ -285,16 +289,19 @@ class PushVlan(BaseModifyPacketTest):
     """
     Push a vlan tag (vid=0, pcp=0)
     """
+
     def runTest(self):
         actions = [ofp.action.push_vlan(ethertype=0x8100)]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, pktlen=104)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class PushVlanVid(BaseModifyPacketTest):
     """
     Push a vlan tag (vid=2, pcp=0)
     """
+
     def runTest(self):
         actions = [ofp.action.push_vlan(ethertype=0x8100),
                    ofp.action.set_field(ofp.oxm.vlan_vid(2))]
@@ -302,10 +309,12 @@ class PushVlanVid(BaseModifyPacketTest):
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2, pktlen=104)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class PushVlanVidPcp(BaseModifyPacketTest):
     """
     Push a vlan tag (vid=2, pcp=3)
     """
+
     def runTest(self):
         actions = [ofp.action.push_vlan(ethertype=0x8100),
                    ofp.action.set_field(ofp.oxm.vlan_vid(2)),
@@ -314,10 +323,12 @@ class PushVlanVidPcp(BaseModifyPacketTest):
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2, vlan_pcp=3, pktlen=104)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class PushVlanPcp(BaseModifyPacketTest):
     """
     Push a vlan tag (vid=0, pcp=3)
     """
+
     def runTest(self):
         actions = [ofp.action.push_vlan(ethertype=0x8100),
                    ofp.action.set_field(ofp.oxm.vlan_pcp(3))]
@@ -325,270 +336,326 @@ class PushVlanPcp(BaseModifyPacketTest):
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=0, vlan_pcp=3, pktlen=104)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class PopVlan(BaseModifyPacketTest):
     """
     Pop a vlan tag
     """
+
     def runTest(self):
         actions = [ofp.action.pop_vlan()]
         pkt = simple_tcp_packet(dl_vlan_enable=True, pktlen=104)
         exp_pkt = simple_tcp_packet()
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetVlanVid(BaseModifyPacketTest):
     """
     Set the vlan vid
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.vlan_vid(2))]
         pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=1)
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetVlanPcp(BaseModifyPacketTest):
     """
     Set the vlan priority
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.vlan_pcp(2))]
         pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_pcp=1)
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_pcp=2)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetEthDst(BaseModifyPacketTest):
     """
     Set Eth Dst address 
     """
+
     def runTest(self):
-        actions = [ofp.action.set_field(ofp.oxm.eth_dst([0x00,0xA1,0xCD,0x53,0xC6,0x55]))]
+        actions = [ofp.action.set_field(ofp.oxm.eth_dst([0x00, 0xA1, 0xCD, 0x53, 0xC6, 0x55]))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(eth_dst="00:A1:CD:53:C6:55")
         self.verify_modify(actions, pkt, exp_pkt)
+
 
 class SetEthSrc(BaseModifyPacketTest):
     """
     Set Eth Src address 
     """
+
     def runTest(self):
-        actions = [ofp.action.set_field(ofp.oxm.eth_src([0x00,0xA1,0xCD,0x53,0xC6,0x55]))]
+        actions = [ofp.action.set_field(ofp.oxm.eth_src([0x00, 0xA1, 0xCD, 0x53, 0xC6, 0x55]))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(eth_src="00:A1:CD:53:C6:55")
         self.verify_modify(actions, pkt, exp_pkt)
+
 
 class SetIpv4Dscp(BaseModifyPacketTest):
     """
     Set IPv4 DSCP 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_dscp(0x01))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(ip_tos=0x04)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv4ECN(BaseModifyPacketTest):
     """
     Set IPv4 ECN
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_ecn(0x01))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(ip_tos=0x01)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv4DSCP_NonZeroECN(BaseModifyPacketTest):
     """
     Set IPv4 DSCP and make sure ECN is not modified 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_dscp(0x01))]
         pkt = simple_tcp_packet(ip_tos=0x11)
         exp_pkt = simple_tcp_packet(ip_tos=0x05)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv4ECN_NonZeroDSCP(BaseModifyPacketTest):
     """
     Set IPv4 ECN and make sure DSCP is not modified
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_ecn(0x02))]
         pkt = simple_tcp_packet(ip_tos=0x11)
         exp_pkt = simple_tcp_packet(ip_tos=0x12)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIPv4Src(BaseModifyPacketTest):
     """
     Set IPv4 srouce address
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ipv4_src(167772161))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(ip_src="10.0.0.1")
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIPv4Dst(BaseModifyPacketTest):
     """
     Set IPv4 destination address
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ipv4_dst(167772161))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(ip_dst="10.0.0.1")
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetTCPSrc(BaseModifyPacketTest):
     """
     Set TCP source port 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.tcp_src(800))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(tcp_sport=800)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetTCPDst(BaseModifyPacketTest):
     """
     Set TCP destination port 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.tcp_dst(800))]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(tcp_dport=800)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetUDPSrc(BaseModifyPacketTest):
     """
     Set UDP source port 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.udp_src(800))]
         pkt = simple_udp_packet()
         exp_pkt = simple_udp_packet(udp_sport=800)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetUDPDst(BaseModifyPacketTest):
     """
     Set UDP destination port 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.udp_dst(800))]
         pkt = simple_udp_packet()
         exp_pkt = simple_udp_packet(udp_dport=800)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIPv6Src(BaseModifyPacketTest):
     """
     Set IPv6 source address 
     """
+
     def runTest(self):
-        actions = [ofp.action.set_field(ofp.oxm.ipv6_src("\x20\x01\xab\xb1\x34\x56\xbc\xcb\x00\x00\x00\x00\x03\x70\x73\x36"))]
+        actions = [
+            ofp.action.set_field(ofp.oxm.ipv6_src("\x20\x01\xab\xb1\x34\x56\xbc\xcb\x00\x00\x00\x00\x03\x70\x73\x36"))]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_src="2001:abb1:3456:bccb:0000:0000:0370:7336")
         self.verify_modify(actions, pkt, exp_pkt)
+
 
 class SetIPv6Dst(BaseModifyPacketTest):
     """
     Set IPv6 destination address 
     """
+
     def runTest(self):
-        actions = [ofp.action.set_field(ofp.oxm.ipv6_dst("\x20\x01\xab\xb1\x34\x56\xbc\xcb\x00\x00\x00\x00\x03\x70\x73\x36"))]
+        actions = [
+            ofp.action.set_field(ofp.oxm.ipv6_dst("\x20\x01\xab\xb1\x34\x56\xbc\xcb\x00\x00\x00\x00\x03\x70\x73\x36"))]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_dst="2001:abb1:3456:bccb:0000:0000:0370:7336")
         self.verify_modify(actions, pkt, exp_pkt)
+
 
 class SetIpv6Dscp(BaseModifyPacketTest):
     """
     Set IPv6 DSCP 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_dscp(0x01))]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_tc=0x04)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv6ECN(BaseModifyPacketTest):
     """
     Set IPv6 ECN
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_ecn(0x01))]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_tc=0x01)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIPv6Flabel(BaseModifyPacketTest):
     """
     Set IPv6 Flabel 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ipv6_flabel(10))]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_fl=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv6DSCP_NonZeroECNandFlabel(BaseModifyPacketTest):
     """
     Set IPv6 DSCP and make sure ECN is not modified 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_dscp(0x01))]
         pkt = simple_tcpv6_packet(ipv6_tc=0x11, ipv6_fl=10)
         exp_pkt = simple_tcpv6_packet(ipv6_tc=0x05, ipv6_fl=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv6ECN_NonZeroDSCPandFlabel(BaseModifyPacketTest):
     """
     Set IPv6 ECN and make sure DSCP is not modified
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ip_ecn(0x02))]
         pkt = simple_tcpv6_packet(ipv6_tc=0x11, ipv6_fl=10)
         exp_pkt = simple_tcpv6_packet(ipv6_tc=0x12, ipv6_fl=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIPv6Flabel_NonZeroDSCPandECN(BaseModifyPacketTest):
     """
     Set IPv6 Flabel 
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.ipv6_flabel(10))]
         pkt = simple_tcpv6_packet(ipv6_tc=0x11, ipv6_fl=9)
         exp_pkt = simple_tcpv6_packet(ipv6_tc=0x11, ipv6_fl=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv4TTL(BaseModifyPacketTest):
     """
     Set IPv4 TTL 
     """
+
     def runTest(self):
         actions = [ofp.action.set_nw_ttl(10)]
         pkt = simple_tcp_packet()
         exp_pkt = simple_tcp_packet(ip_ttl=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class SetIpv6HopLimit(BaseModifyPacketTest):
     """
     Set Ipv6 Hop Limit 
     """
+
     def runTest(self):
         actions = [ofp.action.set_nw_ttl(10)]
         pkt = simple_tcpv6_packet()
         exp_pkt = simple_tcpv6_packet(ipv6_hlim=10)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class DecIpv4TTL(BaseModifyPacketTest):
     """
     Decrement Ipv4 TTL 
     """
+
     def runTest(self):
         actions = [ofp.action.dec_nw_ttl()]
         pkt = simple_tcp_packet(ip_ttl=10)
         exp_pkt = simple_tcp_packet(ip_ttl=9)
         self.verify_modify(actions, pkt, exp_pkt)
 
+
 class DecIpv6HopLimit(BaseModifyPacketTest):
     """
     Decrement Ipv6 Hop Limit 
     """
+
     def runTest(self):
         actions = [ofp.action.dec_nw_ttl()]
         pkt = simple_tcpv6_packet(ipv6_hlim=10)
@@ -600,6 +667,7 @@ class SequentialExecution(BaseModifyPacketTest):
     """
     Set the vlan vid
     """
+
     def runTest(self):
         actions = [ofp.action.set_field(ofp.oxm.vlan_vid(1), ofp.oxm.vlan_vid(2))]
         pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=1)
