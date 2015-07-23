@@ -202,9 +202,9 @@ class HelloRequest(base_tests.SimpleProtocol):
 @group('standard')
 class Echo(base_tests.SimpleProtocol):
     """
-    Test case 20.110: Verify Echo Reply messages are implemented
+    Verify basic Echo Reply generation
 
-    Test echo response with no data
+    Test case 20.110: Verify Echo Reply messages are implemented
     """
 
     def runTest(self):
