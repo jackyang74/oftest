@@ -64,9 +64,9 @@ class OFPR_NO_MATCH_buffer(base_tests.SimpleDataPlane):
         # test
         request = ofp.message.get_config_request()
         response, _ = self.controller.transact(request)
-        logging.info(response.show() + "num=" + str(response.miss_send_len))
+        print(response.show() + "num=" + str(response.miss_send_len))
 
-        pkt = str(simple_tcp_packet(pktlen=70, ip_ttl=1))
+        pkt = str(simple_tcp_packet(pktlen=80, ip_ttl=1))
         self.dataplane.send(in_port, pkt)
         response, _ = self.controller.poll(ofp.message.packet_in)
         self.assertTrue(response is not None, "No packetin received")
@@ -75,14 +75,12 @@ class OFPR_NO_MATCH_buffer(base_tests.SimpleDataPlane):
 
         self.assertEqual(response.reason, ofp.OFPR_NO_MATCH,
                          "Packetin reason field is not NO_MATCH")
-        # TODO
+        # TODO verify the number of bytes transferred in the packet_in is in accordance to the miss_send_len configuration. How to veryfy
 
 
 class OFPR_NO_MATCH_nobuffer(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_NO _MATCH implements buffer handling correct
-
-    Derived from Test case 90.20: OFPR_NO_MATCH unit8_t data[0] buffered
     """
 
     def runTest(self):
@@ -103,12 +101,14 @@ class OFPR_NO_MATCH_nobuffer(base_tests.SimpleDataPlane):
 
         pkt = str(simple_tcp_packet(pktlen=70))
         self.dataplane.send(in_port, pkt)
+
         response, _ = self.controller.poll(ofp.message.packet_in)
         self.assertTrue(response is not None, "No packetin received")
-
+        self.assertEqual(len(pkt), len(response.data),
+                         "The data length was not correct")
         self.assertEqual(response.reason, ofp.OFPR_NO_MATCH,
                          "Packetin reason field is not NO_MATCH")
-        # TODO
+        # TODO Set miss_send_len value to zero. Send a packet to the data plane and trigger a packet_in.
 
 
 class OFPR_NO_MATCH_inport_totalen(base_tests.SimpleDataPlane):
