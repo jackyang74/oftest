@@ -114,7 +114,7 @@ class OFPBRC_BUFFER_EMPTY(base_tests.SimpleDataPlane):
         pkt = str(simple_tcp_packet())
         self.dataplane.send(in_port, pkt)
         response, _ = self.controller.poll(ofp.message.packet_in)
-        # for i in range(1):
+
         msg = ofp.message.packet_out(
             in_port=ofp.OFPP_CONTROLLER,
             actions=[ofp.action.output(port=in_port)],

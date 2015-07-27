@@ -19,6 +19,7 @@ from oftest.testutils import *
 from oftest.parse import parse_ipv6
 import FuncUtils
 
+
 class MatchTest(base_tests.SimpleDataPlane):
     """
     Base class for match tests
@@ -35,49 +36,36 @@ class MatchTest(base_tests.SimpleDataPlane):
         dicts mapping from string names (used in log messages) to string
         packet data.
         """
+        delete_all_flows(self.controller)
         in_port, out_port = openflow_ports(2)
-        table_id = test_param_get("table", 0)
 
         logging.info("Running match test for %s", match.show())
 
-        delete_all_flows(self.controller)
-
         # find metadata, and set the matching field
-        for item in match.oxm_list:
-            if isinstance(item, ofp.oxm.metadata):
-                request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 meta={}".format(item.value))
-                self.controller.message_send(request)
-                match.oxm_list.remove(item)
-
         logging.info("Inserting flow sending matching packets to port %d", out_port)
-        request = ofp.message.flow_add(
-                table_id=1,
-                match=match,
-                instructions=[
-                    ofp.instruction.apply_actions(
-                        actions=[
-                            ofp.action.output(
-                                port=out_port,
-                                max_len=ofp.OFPCML_NO_BUFFER)])],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                priority=15)
-        self.controller.message_send(request)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=match,
+                                     instructions=[ofp.instruction.apply_actions(
+                                         [
+                                             ofp.action.output(
+                                                 port=out_port,
+                                                 max_len=ofp.OFPCML_NO_BUFFER)
+                                         ])],
+                                     prio=15
+                                     )
 
         logging.info("Inserting match-all flow sending packets to controller")
-        request = ofp.message.flow_add(
-            table_id=3,
-            # TODO find a proper way to specify the soft table number
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=1)
-        self.controller.message_send(request)
-
-        do_barrier(self.controller)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     instructions=[ofp.instruction.apply_actions(
+                                         [
+                                             ofp.action.output(
+                                                 port=ofp.OFPP_CONTROLLER,
+                                                 max_len=ofp.OFPCML_NO_BUFFER)
+                                         ])],
+                                     prio=1
+                                     )
 
         for name, pkt in matching.items():
             logging.info("Sending matching packet %s, expecting output to port %d", repr(name), out_port)
@@ -92,68 +80,63 @@ class MatchTest(base_tests.SimpleDataPlane):
             verify_packet_in(self, pktstr, in_port, ofp.OFPR_ACTION)
 
 
-@group('TestSuite50')
+@group('standard')
 class AllWildcardMatch(base_tests.SimpleDataPlane):
     """
-    TestCase 50.10: All Wildcards
-
     Verify for an all wildcarded flow all the injected packets would match that flow
+
+    Derived from TestCase 50.10: All Wildcards
     """
 
     def runTest(self):
-        logging.info("Test case 50.10: All Wildcards")
+        delete_all_flows(self.controller)
         in_port, out_port1, out_port2 = openflow_ports(3)
 
-        #Clear Switch State
-        delete_all_flows(self.controller)
-
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "apply:output={}".format(out_port1))
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     )
 
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        #check for different  match fields and verify packet implements the action specified in the flow
+        # check for different  match fields and verify packet implements the action specified in the flow
         pkt1 = str(simple_tcp_packet(eth_src="00:01:01:01:01:01"))
         self.dataplane.send(in_port, pkt1)
         verify_packets(self, pkt1, [out_port1])
         verify_no_packet(self, pkt1, out_port2)
 
 
-@group('TestSuite50')
+@group('standard')
 class InPort(base_tests.SimpleDataPlane):
     """
-    Test case 50.20: Ingress Port
-
     Match on ingress port
+
+    Derived from Test case 50.20: Ingress Port
     """
 
     def runTest(self):
-        logging.info("Test case 50.20: Ingress Port")
-
-        delete_all_flows(self.controller)
         in_port, out_port, bad_port = openflow_ports(3)
+        delete_all_flows(self.controller)
 
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
-                                                   "apply:output={}".format(in_port,out_port))
-        self.controller.message_send(request)
-
-        #flow add to controller
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port)])],
+                                     prio=15
+                                     )
+        # flow add to controller
         logging.info("Inserting match-all flow sending packets to controller")
-        request = ofp.message.flow_add(
-            table_id=3,
-            instructions=[
-                ofp.instruction.apply_actions(
-                    actions=[
-                        ofp.action.output(
-                            port=ofp.OFPP_CONTROLLER,
-                            max_len=ofp.OFPCML_NO_BUFFER)])],
-            buffer_id=ofp.OFP_NO_BUFFER,
-            priority=1)
-        self.controller.message_send(request)
-        do_barrier(self.controller)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     instructions=[ofp.instruction.apply_actions(
+                                         [
+                                             ofp.action.output(
+                                                 port=ofp.OFPP_CONTROLLER,
+                                                 max_len=ofp.OFPCML_NO_BUFFER)
+                                         ])],
+                                     prio=1
+                                     )
 
         pktstr = str(simple_tcp_packet())
         logging.info("Sending packet on matching ingress port, expecting output to port %d", out_port)
@@ -165,16 +148,44 @@ class InPort(base_tests.SimpleDataPlane):
         verify_packet_in(self, pktstr, bad_port, ofp.OFPR_ACTION)
 
 
-@group('TestSuite50')
+@group('standard')
+class EthSrc(MatchTest):
+    """
+    Match on ethernet source
+
+    TestCase 50.30: Ethernet source address
+    """
+
+    def runTest(self):
+        logging.info("TestCase 50.30: Ethernet source address")
+
+        match = ofp.match([
+            ofp.oxm.eth_src([0, 1, 2, 3, 4, 5])
+        ])
+
+        matching = {
+            "correct": simple_tcp_packet(eth_src='00:01:02:03:04:05'),
+        }
+
+        nonmatching = {
+            "incorrect": simple_tcp_packet(eth_src='00:01:02:03:04:06'),
+            "multicast": simple_tcp_packet(eth_src='01:01:02:03:04:05'),
+            "local": simple_tcp_packet(eth_src='02:01:02:03:04:05'),
+        }
+
+        self.verify_match(match, matching, nonmatching)
+
+
+@group('standard')
 class EthDst(MatchTest):
     """
-    Test Case 50.40: Ethernet destination address
-
     Match on ethernet destination
+
+    Test Case 50.40: Ethernet destination address
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x0),
             ofp.oxm.eth_dst([0x00, 0x01, 0x02, 0x03, 0x04, 0x05])
         ])
 
@@ -190,10 +201,12 @@ class EthDst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class EthDstBroadcast(MatchTest):
     """
     Match on ethernet destination (broadcast)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_dst([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
@@ -211,10 +224,12 @@ class EthDstBroadcast(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class EthDstMulticast(MatchTest):
     """
     Match on ethernet destination (IPv4 multicast)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_dst([0x01, 0x00, 0x5e, 0xed, 0x99, 0x02])
@@ -233,10 +248,12 @@ class EthDstMulticast(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class EthDstMasked(MatchTest):
     """
     Match on ethernet destination (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_dst_masked([0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
@@ -256,38 +273,11 @@ class EthDstMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
-class EthSrc(MatchTest):
-    """
-    TestCase 50.30: Ethernet source address
-
-    Match on ethernet source
-    """
-    def runTest(self):
-        logging.info("TestCase 50.30: Ethernet source address")
-
-
-        match = ofp.match([
-            ofp.oxm.metadata(0x300000000),
-            ofp.oxm.eth_src([0,1,2,3,4,5])
-        ])
-
-        matching = {
-            "correct": simple_tcp_packet(eth_src='00:01:02:03:04:05'),
-        }
-
-        nonmatching = {
-            "incorrect": simple_tcp_packet(eth_src='00:01:02:03:04:06'),
-            "multicast": simple_tcp_packet(eth_src='01:01:02:03:04:05'),
-            "local": simple_tcp_packet(eth_src='02:01:02:03:04:05'),
-        }
-
-        self.verify_match(match, matching, nonmatching)
-
 class EthSrcBroadcast(MatchTest):
     """
     Match on ethernet source (broadcast)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_src([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
@@ -305,10 +295,12 @@ class EthSrcBroadcast(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class EthSrcMulticast(MatchTest):
     """
     Match on ethernet source (IPv4 multicast)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_src([0x01, 0x00, 0x5e, 0xed, 0x99, 0x02])
@@ -327,10 +319,12 @@ class EthSrcMulticast(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class EthSrcMasked(MatchTest):
     """
     Match on ethernet source (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_src_masked([0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
@@ -350,29 +344,28 @@ class EthSrcMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class EthTypeIPv4(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type(IPv4)
-
     Match on ethertype (IPv4)
+
+    TestCase 50.50: Ethernet frame type(IPv4)
     """
 
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800)
         ])
 
         snap_pkt = \
-            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=48)/ \
-            scapy.LLC(dsap=0xaa, ssap=0xaa, ctrl=0x03)/ \
-            scapy.SNAP(OUI=0x000000, code=0x0800)/ \
-            scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=6)/ \
+            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=48) / \
+            scapy.LLC(dsap=0xaa, ssap=0xaa, ctrl=0x03) / \
+            scapy.SNAP(OUI=0x000000, code=0x0800) / \
+            scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=6) / \
             scapy.TCP(sport=1234, dport=80)
 
         llc_pkt = \
-            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=17)/ \
+            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=17) / \
             scapy.LLC(dsap=0xaa, ssap=0xab, ctrl=0x03)
 
         matching = {
@@ -392,16 +385,16 @@ class EthTypeIPv4(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class EthTypeIPv6(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type(IPv6)
-
     Match on ethertype (IPv6)
+
+    TestCase 50.50: Ethernet frame type(IPv6)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x86dd)
         ])
 
@@ -420,16 +413,16 @@ class EthTypeIPv6(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class EthTypeARP(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type(ARP)
-
     Match on ethertype (ARP)
+
+    TestCase 50.50: Ethernet frame type(ARP)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0806)
         ])
 
@@ -446,28 +439,28 @@ class EthTypeARP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class EthTypeNone(MatchTest):
     """
-    TestCase 50.50: Ethernet frame type(None)
-
     Match on no ethertype (IEEE 802.3 without SNAP header)
+
+    TestCase 50.50: Ethernet frame type(None)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x200000000),
             ofp.oxm.eth_type(0x05ff)
         ])
 
         snap_pkt = \
-            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=48)/ \
-            scapy.LLC(dsap=0xaa, ssap=0xaa, ctrl=0x03)/ \
-            scapy.SNAP(OUI=0x000000, code=0x0800)/ \
-            scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=6)/ \
+            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=48) / \
+            scapy.LLC(dsap=0xaa, ssap=0xaa, ctrl=0x03) / \
+            scapy.SNAP(OUI=0x000000, code=0x0800) / \
+            scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=6) / \
             scapy.TCP(sport=1234, dport=80)
 
         llc_pkt = \
-            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=17)/ \
+            scapy.Ether(dst='00:01:02:03:04:05', src='00:06:07:08:09:0a', type=17) / \
             scapy.LLC(dsap=0xaa, ssap=0xab, ctrl=0x03)
 
         matching = {
@@ -482,13 +475,15 @@ class EthTypeNone(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class VlanExact(MatchTest):
     """
     Match on VLAN VID and PCP
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
+            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT | 2),
             ofp.oxm.vlan_pcp(3),
         ])
 
@@ -507,17 +502,18 @@ class VlanExact(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
-@group('TestSuite50')
+
+@group('standard')
 class VlanVID(MatchTest):
     """
-    TestCase 50.60: Input VLAN id
-
     Match on VLAN VID
+
+    TestCase 50.60: Input VLAN id
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x300000000),
-            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
+            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT | 2),
         ])
 
         matching = {
@@ -532,13 +528,15 @@ class VlanVID(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class VlanVIDMasked(MatchTest):
     """
     Match on VLAN VID (masked)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.vlan_vid_masked(ofp.OFPVID_PRESENT|3, ofp.OFPVID_PRESENT|3),
+            ofp.oxm.vlan_vid_masked(ofp.OFPVID_PRESENT | 3, ofp.OFPVID_PRESENT | 3),
         ])
 
         matching = {
@@ -558,17 +556,17 @@ class VlanVIDMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class VlanPCP(MatchTest):
     """
-    TestCase 50.70: Input VLAN priority
-
     Match on VLAN PCP (VID matched)
+
+    TestCase 50.70: Input VLAN priority
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x300000000),
-            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
+            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT | 2),
             ofp.oxm.vlan_pcp(3),
         ])
 
@@ -583,14 +581,16 @@ class VlanPCP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 @nonstandard
 class VlanPCPMasked(MatchTest):
     """
     Match on VLAN PCP (masked, VID matched)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT|2),
+            ofp.oxm.vlan_vid(ofp.OFPVID_PRESENT | 2),
             ofp.oxm.vlan_pcp_masked(3, 3),
         ])
 
@@ -610,10 +610,12 @@ class VlanPCPMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class VlanPCPAnyVID(MatchTest):
     """
     Match on VLAN PCP (VID present)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.vlan_vid_masked(ofp.OFPVID_PRESENT, ofp.OFPVID_PRESENT),
@@ -632,10 +634,12 @@ class VlanPCPAnyVID(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class VlanPresent(MatchTest):
     """
     Match on any VLAN tag (but must be present)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.vlan_vid_masked(ofp.OFPVID_PRESENT, ofp.OFPVID_PRESENT),
@@ -653,10 +657,12 @@ class VlanPresent(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class VlanAbsent(MatchTest):
     """
     Match on absent VLAN tag
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.vlan_vid(ofp.OFPVID_NONE),
@@ -675,16 +681,16 @@ class VlanAbsent(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4Dscp(MatchTest):
     """
-    TestCase 50.110: IP TOS bits(dscp)
-
     Match on ipv4 dscp
+
+    TestCase 50.110: IP TOS bits(dscp)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_dscp(4),
         ])
@@ -700,10 +706,12 @@ class IPv4Dscp(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6Dscp(MatchTest):
     """
     Match on ipv6 dscp
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -722,13 +730,14 @@ class IPv6Dscp(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4Ecn(MatchTest):
     """
     TestCase 50.110: IP TOS bits(ecn)
 
     Match on ipv4 ecn
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -747,10 +756,12 @@ class IPv4Ecn(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6Ecn(MatchTest):
     """
     Match on ipv6 ecn
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -770,16 +781,16 @@ class IPv6Ecn(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4ProtoTCP(MatchTest):
     """
-    TestCase 50.100.1: OP protocol(TCP type)
-
     Match on ipv4 protocol field (TCP)
+
+    TestCase 50.100.1: OP protocol(TCP type)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(6),
         ])
@@ -794,11 +805,13 @@ class IPv4ProtoTCP(MatchTest):
         }
 
         self.verify_match(match, matching, nonmatching)
+
 
 class IPv6ProtoTCP(MatchTest):
     """
     Match on ipv6 protocol field (TCP)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -817,16 +830,16 @@ class IPv6ProtoTCP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4ProtoUDP(MatchTest):
     """
-    TestCase 50.100.2: OP protocol(UDP type)
-
     Match on ipv4 protocol field (UDP)
+
+    TestCase 50.100.2: OP protocol(UDP type)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(17),
         ])
@@ -842,10 +855,12 @@ class IPv4ProtoUDP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6ProtoUDP(MatchTest):
     """
     Match on ipv6 protocol field (UDP)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -864,16 +879,16 @@ class IPv6ProtoUDP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4ProtoICMP(MatchTest):
     """
-    TestCase 50.100.3: OP protocol(ICMP type)
-
     Match on ipv4 protocol field (ICMP)
+
+    TestCase 50.100.3: OP protocol(ICMP type)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
             ofp.oxm.ip_proto(1),
         ])
@@ -889,10 +904,12 @@ class IPv4ProtoICMP(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6ProtoICMP(MatchTest):
     """
     Match on ipv6 protocol field (ICMP)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -911,18 +928,18 @@ class IPv6ProtoICMP(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-
+@group('standard')
 class IPv4Src(MatchTest):
     """
-    TestCase 50.80: IP source address
-
     Match on ipv4 source address
+
+    TestCase 50.80: IP source address
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
             ofp.oxm.eth_type(0x0800),
-            ofp.oxm.ipv4_src(0xc0a80a01), # 192.168.10.1
+            ofp.oxm.ipv4_src(0xc0a80a01),  # 192.168.10.1
         ])
 
         matching = {
@@ -937,18 +954,19 @@ class IPv4Src(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4SrcSubnetMasked(MatchTest):
     """
-    Test case 50.80: IP source address (uint32_t nw_src)
-
     Match on ipv4 source address (subnet masked)
+
+    Test case 50.80: IP source address (uint32_t nw_src)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x400000000),
+            ofp.oxm.eth_type(0x0800),
             # 192.168.0.0/20 (255.255.240.0)
-            ofp.oxm.ipv4_src_masked(0xc0a80000, 0xff0f0000),
+            ofp.oxm.ipv4_src_masked(0xc0a80000, 0xfffff000)
         ])
 
         matching = {
@@ -967,10 +985,13 @@ class IPv4SrcSubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
+@group('standard')
 class IPv4SrcMasked(MatchTest):
     """
     Match on ipv4 source address (arbitrarily masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -991,43 +1012,44 @@ class IPv4SrcMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
+@group('standard')
 class IPv4Dst(MatchTest):
     """
 
     Match on ipv4 destination address
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x100000000),
             # ofp.oxm.eth_type(0x0800),
-            ofp.oxm.ipv4_dst(0xc0a80001), # 192.168.0.1
+            ofp.oxm.ipv4_dst(0xc0a80001),  # 192.168.0.1
         ])
 
         matching = {
-            "192.168.0.1": simple_tcp_packet(ip_dst='192.168.0.1',ip_src='192.168.1.1'),
+            "192.168.0.1": simple_tcp_packet(ip_dst='192.168.0.1', ip_src='192.168.1.1'),
         }
 
         nonmatching = {
-            "192.168.0.2": simple_tcp_packet(ip_dst='192.168.0.2',ip_src='192.168.1.1'),
+            "192.168.0.2": simple_tcp_packet(ip_dst='192.168.0.2', ip_src='192.168.1.1'),
             "255.255.255.255": simple_tcp_packet(ip_dst='255.255.255.255'),
         }
 
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4DstSubnetMasked(MatchTest):
     """
     TestCase 50.90: IP destination address
 
     Match on ipv4 destination address (subnet masked)
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x100000000),
-            # ofp.oxm.eth_type(0x0800),
+            ofp.oxm.eth_type(0x0800),
             # 192.168.0.0/20 (255.255.240.0)
-            ofp.oxm.ipv4_dst_masked(0xc0a80000, 0xFF000000),
+            ofp.oxm.ipv4_dst_masked(0xc0a80000, 0xfffff000),
         ])
 
         matching = {
@@ -1044,10 +1066,12 @@ class IPv4DstSubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv4DstMasked(MatchTest):
     """
     Match on ipv4 destination address (arbitrarily masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1067,10 +1091,12 @@ class IPv4DstMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6Src(MatchTest):
     """
     Match on ipv6 source address
     """
+
     def runTest(self):
         correct = "2001:db8:85a3::8a2e:370:7334"
         incorrect = "2001:db8:85a3::8a2e:370:7324"
@@ -1092,15 +1118,17 @@ class IPv6Src(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6SrcSubnetMasked(MatchTest):
     """
     Match on ipv6 source address (subnet masked)
     """
+
     def runTest(self):
-        flow =       "2001:0db8:85a3::"
-        mask =       "ffff:ffff:ffff::"
-        correct1 =   "2001:0db8:85a3::8a2e:0370:7331"
-        correct2 =   "2001:0db8:85a3::ffff:ffff:ffff"
+        flow = "2001:0db8:85a3::"
+        mask = "ffff:ffff:ffff::"
+        correct1 = "2001:0db8:85a3::8a2e:0370:7331"
+        correct2 = "2001:0db8:85a3::ffff:ffff:ffff"
         incorrect1 = "2001:0db8:85a2::"
 
         match = ofp.match([
@@ -1120,15 +1148,17 @@ class IPv6SrcSubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6SrcMasked(MatchTest):
     """
     Match on ipv6 source address (arbitrarily masked)
     """
+
     def runTest(self):
-        flow =       "2001:0db8:85a3::0001"
-        mask =       "ffff:ffff:ffff::000f"
-        correct1 =   "2001:0db8:85a3::8a2e:0370:7331"
-        correct2 =   "2001:0db8:85a3::ffff:ffff:fff1"
+        flow = "2001:0db8:85a3::0001"
+        mask = "ffff:ffff:ffff::000f"
+        correct1 = "2001:0db8:85a3::8a2e:0370:7331"
+        correct2 = "2001:0db8:85a3::ffff:ffff:fff1"
         incorrect1 = "2001:0db8:85a2::0001"
         incorrect2 = "2001:0db8:85a3::0000"
 
@@ -1150,10 +1180,12 @@ class IPv6SrcMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6Dst(MatchTest):
     """
     Match on ipv6 destination address
     """
+
     def runTest(self):
         correct = "2001:db8:85a3::8a2e:370:7334"
         incorrect = "2001:db8:85a3::8a2e:370:7324"
@@ -1175,15 +1207,17 @@ class IPv6Dst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6DstSubnetMasked(MatchTest):
     """
     Match on ipv6 destination address (subnet masked)
     """
+
     def runTest(self):
-        flow =       "2001:0db8:85a3::"
-        mask =       "ffff:ffff:ffff::"
-        correct1 =   "2001:0db8:85a3::8a2e:0370:7331"
-        correct2 =   "2001:0db8:85a3::ffff:ffff:ffff"
+        flow = "2001:0db8:85a3::"
+        mask = "ffff:ffff:ffff::"
+        correct1 = "2001:0db8:85a3::8a2e:0370:7331"
+        correct2 = "2001:0db8:85a3::ffff:ffff:ffff"
         incorrect1 = "2001:0db8:85a2::"
 
         match = ofp.match([
@@ -1203,15 +1237,17 @@ class IPv6DstSubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6DstMasked(MatchTest):
     """
     Match on ipv6 destination address (arbitrarily masked)
     """
+
     def runTest(self):
-        flow =       "2001:0db8:85a3::0001"
-        mask =       "ffff:ffff:ffff::000f"
-        correct1 =   "2001:0db8:85a3::8a2e:0370:7331"
-        correct2 =   "2001:0db8:85a3::ffff:ffff:fff1"
+        flow = "2001:0db8:85a3::0001"
+        mask = "ffff:ffff:ffff::000f"
+        correct1 = "2001:0db8:85a3::8a2e:0370:7331"
+        correct2 = "2001:0db8:85a3::ffff:ffff:fff1"
         incorrect1 = "2001:0db8:85a2::0001"
         incorrect2 = "2001:0db8:85a3::0000"
 
@@ -1234,16 +1270,18 @@ class IPv6DstMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4TCPSrc(MatchTest):
     """
-    TestCase 50.120: TCP/UDP source port
-
     Match on ipv4 tcp source port
+
+    TestCase 50.120: TCP/UDP source port
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x100000000),
+            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.ip_proto(6),
             ofp.oxm.tcp_src(53),
         ])
 
@@ -1253,16 +1291,18 @@ class IPv4TCPSrc(MatchTest):
 
         nonmatching = {
             "tcp sport=52": simple_tcp_packet(tcp_sport=52),
-            # "udp sport=53": simple_udp_packet(udp_sport=53),
+            "udp sport=53": simple_udp_packet(udp_sport=53),
         }
 
         self.verify_match(match, matching, nonmatching)
+
 
 @nonstandard
 class IPv4TCPSrcMasked(MatchTest):
     """
     Match on ipv4 tcp source port (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1282,10 +1322,12 @@ class IPv4TCPSrcMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6TCPSrc(MatchTest):
     """
     Match on ipv4 tcp source port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1305,18 +1347,18 @@ class IPv6TCPSrc(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
+@group('standard')
 class IPv4TCPDst(MatchTest):
     """
-    TestCase 50.130: TCP/UDP destination port
-
     Match on ipv4 tcp destination port
+
+    TestCase 50.130: TCP/UDP destination port
     """
+
     def runTest(self):
         match = ofp.match([
-            ofp.oxm.metadata(0x100000000),
-            # ofp.oxm.eth_type(0x0800),
-            # ofp.oxm.ip_proto(6),
+            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.ip_proto(6),
             ofp.oxm.tcp_dst(53),
         ])
 
@@ -1331,11 +1373,13 @@ class IPv4TCPDst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 @nonstandard
 class IPv4TCPDstMasked(MatchTest):
     """
     Match on ipv4 tcp destination port (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1355,10 +1399,12 @@ class IPv4TCPDstMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6TCPDst(MatchTest):
     """
     Match on ipv6 tcp destination port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1377,10 +1423,12 @@ class IPv6TCPDst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv4UDPSrc(MatchTest):
     """
     Match on ipv4 udp source port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1399,11 +1447,13 @@ class IPv4UDPSrc(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 @nonstandard
 class IPv4UDPSrcMasked(MatchTest):
     """
     Match on ipv4 udp source port (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1423,10 +1473,12 @@ class IPv4UDPSrcMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6UDPSrc(MatchTest):
     """
     Match on ipv4 udp source port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1445,10 +1497,12 @@ class IPv6UDPSrc(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv4UDPDst(MatchTest):
     """
     Match on ipv4 udp destination port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1467,11 +1521,13 @@ class IPv4UDPDst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 @nonstandard
 class IPv4UDPDstMasked(MatchTest):
     """
     Match on ipv4 udp destination port (masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1491,10 +1547,12 @@ class IPv4UDPDstMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6UDPDst(MatchTest):
     """
     Match on ipv4 udp destination port
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1513,10 +1571,12 @@ class IPv6UDPDst(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv4ICMPType(MatchTest):
     """
     Match on ipv4 icmp type
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1535,10 +1595,12 @@ class IPv4ICMPType(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv4ICMPCode(MatchTest):
     """
     Match on ipv4 icmp code
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0800),
@@ -1557,10 +1619,12 @@ class IPv4ICMPCode(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6ICMPType(MatchTest):
     """
     Match on ipv6 icmp type
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1579,10 +1643,12 @@ class IPv6ICMPType(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class IPv6ICMPCode(MatchTest):
     """
     Match on ipv6 icmp code
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x86dd),
@@ -1601,10 +1667,12 @@ class IPv6ICMPCode(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpOp(MatchTest):
     """
     Match on ARP operation
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
@@ -1621,14 +1689,16 @@ class ArpOp(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpSPA(MatchTest):
     """
     Match on ARP sender IP
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
-            ofp.oxm.arp_spa(0xc0a80001), # 192.168.0.1
+            ofp.oxm.arp_spa(0xc0a80001),  # 192.168.0.1
         ])
 
         matching = {
@@ -1641,10 +1711,12 @@ class ArpSPA(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpSPASubnetMasked(MatchTest):
     """
     Match on ARP sender IP (subnet mask)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
@@ -1668,10 +1740,12 @@ class ArpSPASubnetMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpSPAMasked(MatchTest):
     """
     Match on ARP sender IP (arbitrarily masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
@@ -1691,14 +1765,16 @@ class ArpSPAMasked(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpTPA(MatchTest):
     """
     Match on ARP target IP
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
-            ofp.oxm.arp_tpa(0xc0a80001), # 192.168.0.1
+            ofp.oxm.arp_tpa(0xc0a80001),  # 192.168.0.1
         ])
 
         matching = {
@@ -1711,10 +1787,12 @@ class ArpTPA(MatchTest):
 
         self.verify_match(match, matching, nonmatching)
 
+
 class ArpTPASubnetMasked(MatchTest):
     """
     Match on ARP target IP (subnet mask)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
@@ -1743,6 +1821,7 @@ class ArpTPAMasked(MatchTest):
     """
     Match on ARP target IP (arbitrarily masked)
     """
+
     def runTest(self):
         match = ofp.match([
             ofp.oxm.eth_type(0x0806),
@@ -1763,233 +1842,137 @@ class ArpTPAMasked(MatchTest):
         self.verify_match(match, matching, nonmatching)
 
 
-@group('TestSuite50')
-class L2(base_tests.SimpleDataPlane):
+@group('standard')
+class L2(MatchTest):
     """
+    Verify for an all wildcarded flow all the injected packets would match that flow
+
     TestCase 50.140: L2
-
-    Verify for an all wildcarded flow all the injected packets would match that flow
     """
 
     def runTest(self):
-        logging.info("Test case 50.140: L2")
-        in_port, out_port, bad_port = openflow_ports(3)
+        match = ofp.match([
+            ofp.oxm.eth_src([0, 1, 2, 3, 4, 5]),
+            ofp.oxm.eth_dst([1, 2, 3, 4, 5, 6]),
+            ofp.oxm.vlan_vid(2),
+        ])
 
-        flow_stats = get_flow_stats(self, ofp.match())
-        for en in flow_stats:
-            print(en.show())
-        # exit()
+        matching = {
+            "correct": simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2,
+                                         eth_src='00:01:02:03:04:05',
+                                         eth_dst='01:02:03:04:05:06'
+                                         )
+        }
 
+        nonmatching = {
+            "incorrect": simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2,
+                                           eth_src='00:01:02:03:04:06',
+                                           eth_dst='01:02:03:04:05:06'
+                                           ),
+            "error1": simple_tcp_packet(dl_vlan_enable=True, vlan_vid=3,
+                                        eth_src='00:01:02:03:04:05',
+                                        eth_dst='01:02:03:04:05:06'
+                                        ),
+        }
 
-        #Clear Switch State
-        delete_all_flows(self.controller)
-
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta=0x300000000")
-
-        self.controller.message_send(request)
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta=0x400000000")
-
-        self.controller.message_send(request)
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "in_port={},eth_dst={} "
-                                                   "meta:0x2 goto:1".
-                                                   format(in_port, [0x01, 0x0, 0x0, 0x0, 0x0, 0x1]))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "eth_src={},meta=0x2,vlan_vid=2 "
-                                                   "meta:0x3 goto:2".
-                                                   format([0x33, 0x00, 0x00, 0x00, 0x00, 0x33]))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
-                                                   "eth_type=0x0800,meta=0x13 "
-                                                   "apply:output={}".format(out_port))
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_tcp_packet(eth_src="33:00:00:00:00:33",
-                                     eth_dst="01:00:00:00:00:01",
-                                     dl_vlan_enable=True,
-                                     vlan_vid= 2,
-                                     ))
-
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port])
-        verify_no_packet(self, pkt1, bad_port)
+        self.verify_match(match, matching, nonmatching)
 
 
-        pkt2 = str(simple_tcp_packet(eth_src="00:00:00:00:00:45",
-                                     eth_dst="00:00:00:00:00:33",
-                                     dl_vlan_enable=True,
-                                     vlan_vid= 4,
-                                     ))
-
-        self.dataplane.send(in_port, pkt2)
-        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
-        verify_no_packet(self, pkt2, bad_port)
-
-@group('TestSuite50')
-class L3(base_tests.SimpleDataPlane):
+@group('standard')
+class L3(MatchTest):
     """
+    Verify for an all wildcarded flow all the injected packets would match that flow
+
     TestCase 50.150: L3
-
-    Verify for an all wildcarded flow all the injected packets would match that flow
     """
 
     def runTest(self):
-        logging.info("Test case 50.150: L3")
-        in_port, out_port, bad_port = openflow_ports(3)
+        match = ofp.match([
+            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.ipv4_src_masked(0xc0a80001, 0xfffeffff),
+            ofp.oxm.ipv4_dst_masked(0xc0a80000, 0xfffff000),
+        ])
 
-        #Clear Switch State
-        delete_all_flows(self.controller)
+        matching = {
+            "correct": simple_tcp_packet(ip_src='192.168.0.1', ip_dst='192.168.0.1')
+        }
 
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x100000000))
+        nonmatching = {
+            "incorrect": simple_tcp_packet(ip_src='192.168.0.1', ip_dst='192.168.128.1'),
+            "error1": simple_tcp_packet(ip_src='192.168.0.1', ip_dst='192.168.31.1')
+        }
 
-        self.controller.message_send(request)
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta={}".format(0x400000000))
-
-        self.controller.message_send(request)
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "in_port={} "
-                                                   "meta:0x2 goto:1".
-                                                   format(in_port))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "ip_dst={},meta=0x2 "
-                                                   "meta:0x3 goto:2".
-                                                   format(0xc0a80102))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
-                                                   "ip_src={],eth_type=0x0800,meta=0x3 "
-                                                   "apply:output={}".format(0xc0a80101,out_port))
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_tcp_packet(ip_src="192.168.1.1",
-                                     ip_dst="192.168.1.2",
-                                     ))
-
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port])
-        verify_no_packet(self, pkt1, bad_port)
+        self.verify_match(match, matching, nonmatching)
 
 
-        pkt2 = str(simple_tcp_packet(ip_src="192.168.1.2",
-                                     ip_dst="192.168.1.1",
-                                     ))
-
-        self.dataplane.send(in_port, pkt2)
-        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
-        verify_no_packet(self, pkt2, bad_port)
-
-@group('TestSuite50')
-class L4(base_tests.SimpleDataPlane):
+@group('standard')
+class L4(MatchTest):
     """
+    Matching against a flow with Ingress Port, IP protocol, TCP/UDP
+    source port, TCP/UDP destination port and Ethernet type set, all other
+    fields are wildcarded
+
     TestCase 50.160: L4
-
-    Verify for an all wildcarded flow all the injected packets would match that flow
     """
 
     def runTest(self):
-        logging.info("Test case 50.160: L4")
-        in_port, out_port, bad_port = openflow_ports(3)
+        match = ofp.match([
+            ofp.oxm.eth_type(0x0800),
+            ofp.oxm.ip_proto(6),
+            ofp.oxm.tcp_src(53),
+            ofp.oxm.tcp_dst(64),
+        ])
 
-        #Clear Switch State
-        delete_all_flows(self.controller)
+        matching = {
+            "correct": simple_tcp_packet(tcp_sport=53, tcp_dport=64)
+        }
 
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x100000000))
+        nonmatching = {
+            "incorrect": simple_tcp_packet(tcp_sport=53, tcp_dport=65),
+            "error1": simple_tcp_packet(tcp_sport=54, tcp_dport=64)
+        }
 
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta={}".format(0x400000000))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "in_port={} "
-                                                   "meta:0x2 goto:1".
-                                                   format(in_port))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "udp_src={},udp_dst={},meta=0x2 "
-                                                   "meta:0x3 goto:2".
-                                                   format(100,200))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
-                                                   "ip_proto=17,eth_type=0x0800,meta=0x3 "
-                                                   "apply:output={}".format(out_port))
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
-        #check for different  match fields and verify packet implements the action specified in the flow
-        pkt1 = str(simple_udp_packet(udp_sport=100,
-                                     udp_dport=200,
-                                     ))
-
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port])
-        verify_no_packet(self, pkt1, bad_port)
+        self.verify_match(match, matching, nonmatching)
 
 
-        pkt2 = str(simple_udp_packet(udp_sport=101,
-                                     udp_dport=200,
-                                     ))
-
-        self.dataplane.send(in_port, pkt2)
-        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
-        verify_no_packet(self, pkt2, bad_port)
-
-
-@group('TestSuite50')
+@group('standard')
 class MatchPriorities(base_tests.SimpleDataPlane):
+    """
+    Verifying that flows with different priorities match in the correct order.
 
+    Derived from Test case 50.190: Match priorities
     """
 
-    """
     def runTest(self):
-        logging.info("Test case 50.190: Match priorities")
-        in_port, out_port1, out_port2 = openflow_ports(3)
-
-        #Clear Switch State
         delete_all_flows(self.controller)
-
+        in_port, out_port1, out_port2 = openflow_ports(3)
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 in_port={} "
-                                                   "apply:output={}".format(in_port,out_port1))
-        self.controller.message_send(request)
-
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     prio=15
+                                     )
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=14 in_port={} "
-                                                   "apply:output={}".format(in_port,out_port2))
-        self.controller.message_send(request)
-        do_barrier(self.controller)
-
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     prio=14
+                                     )
+        # test
         pkt1 = str(simple_tcp_packet())
         self.dataplane.send(in_port, pkt1)
         verify_packets(self, pkt1, [out_port1])
         verify_no_packet(self, pkt1, out_port2)
 
 
-@group('TestSuite50')
+@group('standard')
 class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
     """
 
     """
+
     def runTest(self):
         logging.info("Test case 50.200: Fragments wildcard TCP Port")
         in_port, out_port1, bad_port = openflow_ports(3)
@@ -2007,21 +1990,20 @@ class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
                                                    "tcp_src={},meta=0x2 "
                                                    "apply:output={}".
-                                                   format(100,200))
+                                                   format(100, 200))
 
 
-
-
-@group('TestSuite50')
+@group('standard')
 class IPSourceAddrARP(base_tests.SimpleDataPlane):
     """
 
     """
+
     def runTest(self):
         logging.info("Test case 50.210: IP source address of ARP packets")
         in_port, out_port, bad_port = openflow_ports(3)
 
-         #Clear Switch State
+        # Clear Switch State
         delete_all_flows(self.controller)
 
         # flow add
@@ -2031,7 +2013,7 @@ class IPSourceAddrARP(base_tests.SimpleDataPlane):
 
         request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
                                                    "ip_src={},eth_type=0x0806 "
-                                                   "apply:output={}".format(0xc0a80101,out_port))
+                                                   "apply:output={}".format(0xc0a80101, out_port))
         self.controller.message_send(request)
 
         pkt1 = str(simple_arp_packet(ip_snd="192.168.1.1"))
@@ -2039,16 +2021,10 @@ class IPSourceAddrARP(base_tests.SimpleDataPlane):
         verify_packets(self, pkt1, [out_port])
         verify_no_packet(self, pkt1, bad_port)
 
-
         pkt2 = str(simple_arp_packet(ip_snd="192.168.1.2"))
         self.dataplane.send(in_port, pkt2)
         verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
         verify_no_packet(self, pkt2, bad_port)
-
-
-
-
-
 
 
 @group('TestSuite50')
@@ -2056,11 +2032,12 @@ class IPDestAddrARP(base_tests.SimpleDataPlane):
     """
 
     """
+
     def runTest(self):
         logging.info("Test case 50.200: Fragments wildcard TCP Port")
         in_port, out_port, bad_port = openflow_ports(3)
 
-        #Clear Switch State
+        # Clear Switch State
         delete_all_flows(self.controller)
 
         # flow add
@@ -2086,12 +2063,7 @@ class IPDestAddrARP(base_tests.SimpleDataPlane):
         verify_packets(self, pkt1, [out_port])
         verify_no_packet(self, pkt1, bad_port)
 
-
         pkt2 = str(simple_arp_packet(ip_tgt="192.168.1.2"))
         self.dataplane.send(in_port, pkt2)
         verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
         verify_no_packet(self, pkt2, bad_port)
-
-
-
-

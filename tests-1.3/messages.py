@@ -49,7 +49,7 @@ class HelloWithBody(base_tests.SimpleProtocol):
                         "Hello Error message was received")
 
 
-@group('TestSuite10')
+@group('standard')
 class ErrorMessage(base_tests.SimpleProtocol):
     """
     Test case 80.30: OFPT_ERROR
@@ -67,10 +67,10 @@ class ErrorMessage(base_tests.SimpleProtocol):
         self.assertTrue(response.code == ofp.OFPHFC_INCOMPATIBLE,
                         "Hello Error with reason Version INCOMPATIBLE was not received")
 
-@group('TestSuite20')
+@group('standard')
 class EchoWithoutBody(base_tests.SimpleProtocol):
     """
-    Test case 20.110: Verify Echo Reply messages are implemented
+    Test case 80.40: Verify Echo Reply messages are implemented
     Test echo response with no data
     """
 
@@ -87,7 +87,7 @@ class EchoWithoutBody(base_tests.SimpleProtocol):
         self.assertEqual(len(response.data), 0, 'response data non-empty')
 
 
-@group('OFTest')
+@group('standard')
 class EchoWithBody(base_tests.SimpleProtocol):
     """
     Test echo response with short string data
