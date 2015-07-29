@@ -33,7 +33,6 @@ class OFPBRC_BAD_VERSION(base_tests.SimpleProtocol):
     """
     Verify DUT is able to respond correctly to error condition
 
-    Derived from Test case 100.10: OFPHFC_INCOMPATIBLE
     """
 
     def runTest(self):
@@ -54,7 +53,6 @@ class OFPBRC_BAD_TYPE(base_tests.SimpleProtocol):
     """
     Verify DUT is able to respond correctly to error condition
 
-    Derived from Test case 100.10: OFPHFC_INCOMPATIBLE
     """
 
     def runTest(self):
@@ -75,7 +73,6 @@ class OFPBRC_BAD_LEN(base_tests.SimpleDataPlane):
     """
     Verify DUT is able to respond correctly to error condition
 
-    Derived from Test case 100.10: OFPHFC_INCOMPATIBLE
     """
 
     def runTest(self):
@@ -91,12 +88,11 @@ class OFPBRC_BAD_LEN(base_tests.SimpleDataPlane):
 
 
 class OFPBRC_BUFFER_EMPTY(base_tests.SimpleDataPlane):
-    # TODO
+    # TODO The error code CPQD returen is incorrect
     """
     Verify Controller is able to use the OFPT_PACKET_OUT message
     to send a packet out of one of the DUT ports
 
-    Derived from Test case 90.150: OFPT_PACKET_OUT
     """
 
     def runTest(self):
@@ -127,11 +123,34 @@ class OFPBRC_BUFFER_EMPTY(base_tests.SimpleDataPlane):
                          "Error message error code is not OFPBRC_BUFFER_EMPTY")
 
 
+class OFPBRC_BUFFER_UNKNOWN(base_tests.SimpleDataPlane):
+    # TODO The error code CPQD returen is incorrect
+    """
+    Verify Controller is able to use the OFPT_PACKET_OUT message
+    to send a packet out of one of the DUT ports
+
+    """
+
+    def runTest(self):
+        in_port = openflow_ports(1)[0]
+        pkt = str(simple_tcp_packet())
+
+        msg = ofp.message.packet_out(
+            in_port=ofp.OFPP_CONTROLLER,
+            actions=[ofp.action.output(port=in_port)],
+            buffer_id=17123,
+            data=pkt)
+        self.controller.message_send(msg)
+
+        response, _ = self.controller.poll(ofp.message.bad_request_error_msg)
+        self.assertEqual(response.code, ofp.OFPBRC_BUFFER_EMPTY,
+                         "Error message error code is not OFPBRC_BUFFER_EMPTY")
+
+
 class OFPBAC_BAD_TYPE(base_tests.SimpleProtocol):
     """
     Verify DUT is able to respond correctly to error condition
 
-    Derived from Test case 100.10: OFPHFC_INCOMPATIBLE
     """
 
     def runTest(self):
@@ -155,7 +174,6 @@ class OFPBAC_BAD_ARGUMENT(base_tests.SimpleProtocol):
     """
     Verify DUT is able to respond correctly to error condition
 
-    Derived from Test case 100.10: OFPHFC_INCOMPATIBLE
     """
 
     def runTest(self):
@@ -172,7 +190,7 @@ class OFPBAC_BAD_ARGUMENT(base_tests.SimpleProtocol):
 
 class OFPFMFC_OVERLAP(base_tests.SimpleProtocol):
     """
-
+    Verify Controller is able to respond correctly to error condition
     """
 
     def runTest(self):
