@@ -104,7 +104,7 @@ class FlowDurationSecs(base_tests.SimpleDataPlane):
 
 
 @group('optional')
-class DurationNSecs(base_tests.SimpleDataPlane):
+class FlowDurationNSecs(base_tests.SimpleDataPlane):
     """
     Verify that the duration_nsec counter in the Flow_stats reply increments
     in accordance with the time the flow has been alive
@@ -213,7 +213,7 @@ class PortReceivedBytes(base_tests.SimpleDataPlane):
 
 
 @group('optional')
-class PortReceivedBytes(base_tests.SimpleDataPlane):
+class PortTransmittedBytes(base_tests.SimpleDataPlane):
     """
     Verify that the tx_bytes counter in the Port_Stats reply increments in
     accordance with the packets transmitted
@@ -240,7 +240,7 @@ class PortReceivedBytes(base_tests.SimpleDataPlane):
 
 
 @group('optional')
-class ReceiveDrops(base_tests.SimpleDataPlane):
+class PortReceiveDrops(base_tests.SimpleDataPlane):
     """
     Verify that the rx_dropped counter in the Port_Stats reply increments in
     accordance with the packets dropped
@@ -265,7 +265,7 @@ class ReceiveDrops(base_tests.SimpleDataPlane):
 
 
 @group('optional')
-class TransmitDrops(base_tests.SimpleDataPlane):
+class PortTransmitDrops(base_tests.SimpleDataPlane):
     """
     Verify that the tx_dropped counter in the Port_Stats reply increments in
     accordance with the packets dropped
