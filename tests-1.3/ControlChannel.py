@@ -38,7 +38,7 @@ class StartupBahavior(base_tests.SimpleDataPlane):
 
 
 @group('standard')
-class ControlChannelEstablish(base_tests.SimpleDataPlane):
+class TCPDefaultPort(base_tests.SimpleDataPlane):
     """
     Test all methods of control channel establishment
 
