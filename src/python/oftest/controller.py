@@ -124,7 +124,7 @@ class Controller(Thread):
         self.handlers = {}
         self.keep_alive = False
         self.active = True
-        self.initial_hello = False
+        self.initial_hello = True
 
         # OpenFlow message/packet queue
         # Protected by the packets_cv lock / condition variable
