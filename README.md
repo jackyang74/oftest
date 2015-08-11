@@ -63,7 +63,7 @@ We welcome any kind of patch. Send all patches as pull requests to `floodlight/o
 The following software is required to run OFTest:
 
  * Python 2.7
- * Scapy
+ * Scapy 2.2.0
  * tcpdump (optional - Scapy will complain if it's missing)
  * Doxygen and doxypy (optional - for documentation generation)
  * PyLint (optional - for source checking)
