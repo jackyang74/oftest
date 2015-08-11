@@ -127,19 +127,6 @@ The "platform" is a configuration file (written in Python) that tells OFTest how
 
 The default platform, `eth`, uses Linux Ethernet interfaces and is configured with the `-i` option (or `--interface`). Pass the option as `-i ofport@interface`, for example `-i 1@eth1`. If no `-i` options are given the the default configuration uses vEths for backwards-compatibility with the original OpenFlow reference switch.
 
-### `remote`
-
-Another common platform, `remote`, provides support for testing of switches on a different host. This can be useful for cases where interfaces are not available on one host (i.e. they're not bound to a Linux interface driver) or where OFTest cannot run on the same host (unsupported OS, missing software, etc.).
-
-This can be enable by modifying the `platforms/remote.py` file to point to 4 NICs on the host running OFTest, like so:
-
-    remote_port_map = {
-        23 : "eth2", # OpenFlow port 23 of the switch is connected to physical port on the server eth2
-        24 : "eth3", # OpenFlow port 24 of the switch is connected to physical port on the server eth3
-        25 : "eth4",
-        26 : "eth5"
-    }
-
 ## Passing Parameters to Tests
 
 There is a facility for passing test-specific parameters into tests that works as follows. On the command line, give the parameter
