@@ -1,3 +1,7 @@
+This test framework comes from Project Floodlight.
+We add more OF1.3 cases for MeshSr ONetSwitch series.
+https://github.com/floodlight/oftest/tree/master/tests-1.3
+
 OFTest OpenFlow Testing Framework
 
 ---
