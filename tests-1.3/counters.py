@@ -23,8 +23,6 @@ class FlowReceivedPackets(base_tests.SimpleDataPlane):
     """
     Verify that the packet_count counter in the Flow-stats reply increments
     in accordance with packets received.
-
-    TestCase 60.10: Flow Received Packets
     """
 
     def runTest(self):
@@ -52,8 +50,6 @@ class FlowReceivedBytes(base_tests.SimpleDataPlane):
     """ 
     Verify that the byte_count counter in the Flow-stats reply increments in
     accordance with packets received.
-
-    TestCase 60.10: Flow Received Bytes
     """
 
     def runTest(self):
@@ -81,8 +77,6 @@ class FlowDurationSecs(base_tests.SimpleDataPlane):
     """
     Verify that the duration_sec counter in the Flow_stats reply increments
     in accordance with the time the flow has been alive
-
-    Test case 60.30: Duration (secs)
     """
 
     def runTest(self):
@@ -108,8 +102,6 @@ class FlowDurationNSecs(base_tests.SimpleDataPlane):
     """
     Verify that the duration_nsec counter in the Flow_stats reply increments
     in accordance with the time the flow has been alive
-
-    Test case 60.40: Duration (nsecs)
     """
 
     def runTest(self):
@@ -136,8 +128,6 @@ class PortReceivedPackets(base_tests.SimpleDataPlane):
     """
     Verify that the rx_packets counter in the Port_Stats reply increments in
     accordance with the packets received
-
-    TestCase 60.50: Received Packets
     """
 
     def runTest(self):
@@ -163,8 +153,6 @@ class PortTransmittedPackets(base_tests.SimpleDataPlane):
     """
     Verify that the tx_packets counter in the Port_Stats reply increments in
     accordance with the packets transmitted
-
-    Test case 60.60: Transmitted Packets
     """
 
     def runTest(self):
@@ -190,8 +178,6 @@ class PortReceivedBytes(base_tests.SimpleDataPlane):
     """
     Verify that the rx_bytes counter in the Port_Stats reply increments in
     accordance with the bytes received
-
-    TestCase 60.70: Port Received bytes
     """
 
     def runTest(self):
@@ -217,8 +203,6 @@ class PortTransmittedBytes(base_tests.SimpleDataPlane):
     """
     Verify that the tx_bytes counter in the Port_Stats reply increments in
     accordance with the packets transmitted
-
-    Derived from TestCase 60.80: Port Transmitted bytes
     """
 
     def runTest(self):
@@ -244,8 +228,6 @@ class PortReceiveDrops(base_tests.SimpleDataPlane):
     """
     Verify that the rx_dropped counter in the Port_Stats reply increments in
     accordance with the packets dropped
-
-    TestCase 60.90: Port Received drops
     """
 
     def runTest(self):
@@ -269,8 +251,6 @@ class PortTransmitDrops(base_tests.SimpleDataPlane):
     """
     Verify that the tx_dropped counter in the Port_Stats reply increments in
     accordance with the packets dropped
-
-    Test case 60.100: Transmit drop
     """
 
     def runTest(self):
@@ -294,8 +274,6 @@ class QueueTransmitPackets(base_tests.SimpleDataPlane):
     """
     Verify that the tx_packets counter in the Queue_Stats reply increments
     in accordance with packets transmitted from the queue.
-
-    Test case 60.170: Transmit Packets
     """
 
     # TODO:OSNT to trigger dropped action
@@ -313,27 +291,9 @@ class QueueTransmitPackets(base_tests.SimpleDataPlane):
         self.assertTrue(stat.rx_dropped is not None, "No rx_dropped field")
 
 
-@group('optional')
-class CRCErrors(base_tests.SimpleDataPlane):
-    """
-    TestCase 60.150: CRCErrors
-
-    """
-
-    def runTest(self):
-        logging.info("Test case 60.100: Port Receive drops")
-        in_port, out_port = openflow_ports(2)
-
-        # Clear Switch State
-        delete_all_flows(self.controller)
-
-        # TODO: send CRC error packets
-
-
 @group('standard')
 class ActiveEntries(base_tests.SimpleDataPlane):
     """
-    TestCase 60.200 Active Entries
 
     """
 
@@ -371,8 +331,6 @@ class MeterDurationSecs(base_tests.SimpleDataPlane):
     """
     Verify that the duration_sec counter in the Flow_stats reply increments
     in accordance with the time the flow has been alive
-
-    Test case 60.30: Duration (secs)
     """
     # TODO you need to complete
 

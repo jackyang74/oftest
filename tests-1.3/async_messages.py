@@ -75,48 +75,14 @@ class OFPR_NO_MATCH_buffer(base_tests.SimpleDataPlane):
 
         self.assertEqual(response.reason, ofp.OFPR_NO_MATCH,
                          "Packetin reason field is not NO_MATCH")
-        # TODO verify the number of bytes transferred in the packet_in is in accordance to the miss_send_len configuration. How to veryfy
 
 
-class OFPR_NO_MATCH_nobuffer(base_tests.SimpleDataPlane):
-    """
-    Verify packet_in OFPR_NO _MATCH implements buffer handling correct
-    """
 
-    def runTest(self):
-        delete_all_flows(self.controller)
-
-        # config
-        in_port, out_port = openflow_ports(2)
-        FuncUtils.flow_entry_install(self.controller,
-                                     "flow_add",
-                                     instructions=[ofp.instruction.apply_actions(
-                                         [ofp.action.output(
-                                             port=ofp.OFPP_CONTROLLER,
-                                             max_len=1000
-                                         )])])
-        # test
-        request = ofp.message.set_config(miss_send_len=0)
-        self.controller.message_send(request)
-
-        pkt = str(simple_tcp_packet(pktlen=70))
-        self.dataplane.send(in_port, pkt)
-
-        response, _ = self.controller.poll(ofp.message.packet_in)
-        self.assertTrue(response is not None, "No packetin received")
-        self.assertEqual(len(pkt), len(response.data),
-                         "The data length was not correct")
-        self.assertEqual(response.reason, ofp.OFPR_NO_MATCH,
-                         "Packetin reason field is not NO_MATCH")
-        # TODO Set miss_send_len value to zero. Send a packet to the data plane and trigger a packet_in.
 
 
 class OFPR_NO_MATCH_inport_totalen(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_NO _MATCH reports correct inport
-
-    Derived from Test case 90.40: OFPR_NO_MATCH uint16_t in_port
-    and Test case 90.50: OFPR_NO_MATCH int16_t total_len
     """
 
     def runTest(self):
@@ -140,8 +106,6 @@ class OFPR_NO_MATCH_inport_totalen(base_tests.SimpleDataPlane):
 class OFPR_Action_reason(base_tests.SimpleDataPlane):
     """
     Verify packet_in specifies the correct reason for Action explicitly output to controller
-
-    Derived from Test case 90.60: OFPR_Action uint8_t reason
     """
 
     def runTest(self):
@@ -166,8 +130,6 @@ class OFPR_Action_reason(base_tests.SimpleDataPlane):
 class OFPR_Action_buffered(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_ACTION implements buffer handling correct
-
-    Derived from Test case 90.60: OFPR_Action uint8_t reason
     """
 
     def runTest(self):
@@ -197,8 +159,6 @@ class OFPR_Action_buffered(base_tests.SimpleDataPlane):
 class OFPR_Action_unbuffered(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_ACTION implements buffer handling correct
-
-    Derived from Test case 90.60: OFPR_Action uint8_t reason
     """
 
     def runTest(self):
@@ -228,9 +188,6 @@ class OFPR_Action_unbuffered(base_tests.SimpleDataPlane):
 class OFPR_ACTION_inport_totalen(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_ACTION reports correct inport and total lengeth
-
-    Derived from Test case 90.90: OFPR_ACTION uint16_t in_port
-    and OFPR_ACTION int16_t total_len
     """
 
     def runTest(self):
@@ -256,9 +213,9 @@ class OFPT_PORT_STATUS(base_tests.SimpleDataPlane):
     """
     Verify packet_in OFPR_ACTION implements buffer handling correct
 
-    Derived from Test case 90.60: OFPR_Action uint8_t reason
     """
-    # TODO
+    # TODO SW how to add/remove port to tigger port add/removed message
+    # port_config_set can only trigger port modified message
     def runTest(self):
         delete_all_flows(self.controller)
 
@@ -271,8 +228,7 @@ class OFPT_PORT_STATUS(base_tests.SimpleDataPlane):
         # test
         response, _ = self.controller.poll(ofp.message.port_status, 100)
         logging.info(response.show())
-        # self.assertTrue(response is not None, "No packetin received")
-        # self.assertEqual(len(response.data), max_len, "Length of packetin is incorrect")
+        self.assertTrue(response is not None, "No packetin received")
 
 
 class OFPT_PORT_MOD_No_Forward(base_tests.SimpleDataPlane):
@@ -334,27 +290,7 @@ class OFPT_PORT_MOD_No_PacketIn(base_tests.SimpleDataPlane):
         self.assertEqual(response.desc.config & ofp.OFPPC_NO_PACKET_IN, 0, "Config is incorrect")
 
 
-class OFPT_PACKET_OUT(base_tests.SimpleDataPlane):
-    """
-    Verify Controller is able to use the OFPT_PACKET_OUT message
-    to send a packet out of one of the DUT ports
 
-    Derived from Test case 90.150: OFPT_PACKET_OUT
-    """
-
-    def runTest(self):
-        pkt = str(simple_tcp_packet())
-
-        for of_port in config["port_map"].keys():
-            msg = ofp.message.packet_out(
-                in_port=ofp.OFPP_CONTROLLER,
-                actions=[ofp.action.output(port=of_port)],
-                buffer_id=ofp.OFP_NO_BUFFER,
-                data=pkt)
-
-            logging.info("PacketOut test, port %d", of_port)
-            self.controller.message_send(msg)
-            verify_packets(self, pkt, [of_port])
 
 
 class OFPT_QUEUE_GET_CONFIG_REPLY(base_tests.SimpleDataPlane):

@@ -29,7 +29,6 @@ class OFPHFC_INCOMPATIBLE(base_tests.SimpleProtocol):
 
 
 class OFPBRC_BAD_VERSION(base_tests.SimpleProtocol):
-    # TODO
     """
     Verify DUT is able to respond correctly to error condition
 
@@ -147,27 +146,7 @@ class OFPBRC_BUFFER_UNKNOWN(base_tests.SimpleDataPlane):
                          "Error message error code is not OFPBRC_BUFFER_EMPTY")
 
 
-class OFPBAC_BAD_TYPE(base_tests.SimpleProtocol):
-    """
-    Verify DUT is able to respond correctly to error condition
 
-    """
-
-    def runTest(self):
-        action = ofp.action.output(
-            port=ofp.OFPP_CONTROLLER,
-            max_len=ofp.OFPCML_NO_BUFFER
-        )
-        action.type = 100
-        FuncUtils.flow_entry_install(self.controller,
-                                     "flow_add",
-                                     instructions=[ofp.instruction.apply_actions(
-                                         [action])])
-        response, _ = self.controller.poll(ofp.message.bad_action_error_msg)
-        self.assertTrue(response is not None,
-                        "No Error message was received")
-        self.assertEqual(response.code, ofp.OFPBAC_BAD_TYPE,
-                         "Error message error code is not OFPBRC_BAD_TYPE")
 
 
 class OFPBAC_BAD_ARGUMENT(base_tests.SimpleProtocol):
@@ -224,8 +203,6 @@ class OFPFMFC_OVERLAP(base_tests.SimpleProtocol):
 class OFPFMFC_BAD_COMMAND(base_tests.SimpleProtocol):
     """
     Verify Controller is able to respond correctly to error condition -- OFPFMFC_BAD_COMMAND
-
-    Derived from Test case 100.240: OFPFMFC_BAD_COMMAND
     """
 
     def runTest(self):

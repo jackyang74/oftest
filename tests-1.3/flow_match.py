@@ -19,6 +19,8 @@ from oftest.testutils import *
 from oftest.parse import parse_ipv6
 import FuncUtils
 
+import time
+
 
 class MatchTest(base_tests.SimpleDataPlane):
     """
@@ -84,8 +86,6 @@ class MatchTest(base_tests.SimpleDataPlane):
 class AllWildcardMatch(base_tests.SimpleDataPlane):
     """
     Verify for an all wildcarded flow all the injected packets would match that flow
-
-    Derived from TestCase 50.10: All Wildcards
     """
 
     def runTest(self):
@@ -110,8 +110,6 @@ class AllWildcardMatch(base_tests.SimpleDataPlane):
 class InPort(base_tests.SimpleDataPlane):
     """
     Match on ingress port
-
-    Derived from Test case 50.20: Ingress Port
     """
 
     def runTest(self):
@@ -152,8 +150,6 @@ class InPort(base_tests.SimpleDataPlane):
 class EthSrc(MatchTest):
     """
     Match on ethernet source
-
-    TestCase 50.30: Ethernet source address
     """
 
     def runTest(self):
@@ -428,7 +424,6 @@ class EthTypeARP(MatchTest):
 
         matching = {
             "arp": simple_arp_packet(),
-            # TODO vlan tagged
         }
 
         nonmatching = {
@@ -1040,8 +1035,6 @@ class IPv4Dst(MatchTest):
 @group('standard')
 class IPv4DstSubnetMasked(MatchTest):
     """
-    TestCase 50.90: IP destination address
-
     Match on ipv4 destination address (subnet masked)
     """
 
@@ -1882,8 +1875,6 @@ class L2(MatchTest):
 class L3(MatchTest):
     """
     Verify for an all wildcarded flow all the injected packets would match that flow
-
-    TestCase 50.150: L3
     """
 
     def runTest(self):
@@ -1911,8 +1902,6 @@ class L4(MatchTest):
     Matching against a flow with Ingress Port, IP protocol, TCP/UDP
     source port, TCP/UDP destination port and Ethernet type set, all other
     fields are wildcarded
-
-    TestCase 50.160: L4
     """
 
     def runTest(self):
@@ -1939,8 +1928,6 @@ class L4(MatchTest):
 class MatchPriorities(base_tests.SimpleDataPlane):
     """
     Verifying that flows with different priorities match in the correct order.
-
-    Derived from Test case 50.190: Match priorities
     """
 
     def runTest(self):
@@ -1968,102 +1955,22 @@ class MatchPriorities(base_tests.SimpleDataPlane):
 
 
 @group('standard')
-class FragmentsWildcardTCPPort(base_tests.SimpleDataPlane):
+class RepeatedMatch(base_tests.SimpleDataPlane):
     """
-
-    """
-
-    def runTest(self):
-        logging.info("Test case 50.200: Fragments wildcard TCP Port")
-        in_port, out_port1, bad_port = openflow_ports(3)
-
-        # Clear Switch State
-        delete_all_flows(self.controller)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x100000000))
-        self.controller.message_send(request)
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=0,prio=15 "
-                                                   "in_port={} "
-                                                   "meta:0x2 goto:1".
-                                                   format(in_port))
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "tcp_src={},meta=0x2 "
-                                                   "apply:output={}".
-                                                   format(100, 200))
-
-
-@group('standard')
-class IPSourceAddrARP(base_tests.SimpleDataPlane):
-    """
-
+    Verify behavior when a flow entry repeats an OXM_TYPE.
     """
 
     def runTest(self):
-        logging.info("Test case 50.210: IP source address of ARP packets")
-        in_port, out_port, bad_port = openflow_ports(3)
-
-        # Clear Switch State
         delete_all_flows(self.controller)
-
+        in_port, out_port1, out_port2 = openflow_ports(3)
         # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x400000000))
-        self.controller.message_send(request)
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port), ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     prio=15
+                                     )
 
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "ip_src={},eth_type=0x0806 "
-                                                   "apply:output={}".format(0xc0a80101, out_port))
-        self.controller.message_send(request)
-
-        pkt1 = str(simple_arp_packet(ip_snd="192.168.1.1"))
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port])
-        verify_no_packet(self, pkt1, bad_port)
-
-        pkt2 = str(simple_arp_packet(ip_snd="192.168.1.2"))
-        self.dataplane.send(in_port, pkt2)
-        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
-        verify_no_packet(self, pkt2, bad_port)
-
-
-@group('TestSuite50')
-class IPDestAddrARP(base_tests.SimpleDataPlane):
-    """
-
-    """
-
-    def runTest(self):
-        logging.info("Test case 50.200: Fragments wildcard TCP Port")
-        in_port, out_port, bad_port = openflow_ports(3)
-
-        # Clear Switch State
-        delete_all_flows(self.controller)
-
-        # flow add
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=0 "
-                                                   "meta={}".format(0x100000000))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=0 "
-                                                   "meta={}".format(0x200000000))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=1,prio=15 "
-                                                   "ip_dst={} meta:0x3 goto:1".format(0xc0a80101))
-        self.controller.message_send(request)
-
-        request, _, _ = FuncUtils.dpctl_cmd_to_msg("flow-mod cmd='add',table=2,prio=15 "
-                                                   "eth_type=0x0806,meta=0x3 "
-                                                   "apply:output={}".format(out_port))
-        self.controller.message_send(request)
-
-        pkt1 = str(simple_arp_packet(ip_tgt="192.168.1.1"))
-        self.dataplane.send(in_port, pkt1)
-        verify_packets(self, pkt1, [out_port])
-        verify_no_packet(self, pkt1, bad_port)
-
-        pkt2 = str(simple_arp_packet(ip_tgt="192.168.1.2"))
-        self.dataplane.send(in_port, pkt2)
-        verify_packet_in(self, pkt2, in_port, ofp.OFPR_ACTION)
-        verify_no_packet(self, pkt2, bad_port)
+        msg, _ = self.controller.poll(ofp.message.bad_match_error_msg)
+        self.assertTrue(msg is not None, "Error message was not received")
+        self.assertEqual(msg.code, ofp.OFPBMC_DUP_FIELD, "Time is not correct")

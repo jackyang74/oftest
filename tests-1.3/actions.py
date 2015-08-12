@@ -51,8 +51,6 @@ class NoActionDrops(base_tests.SimpleDataPlane):
 class ForwardALL(base_tests.SimpleDataPlane):
     """
     Verify implementation of the Forward: ALL function
-
-    TestCase 70.30: Forward: ALL
     """
 
     def runTest(self):
@@ -103,14 +101,12 @@ class ForwardController(base_tests.SimpleDataPlane):
         verify_packet_in(self, pkt, in_port, ofp.OFPR_ACTION)
 
 
-@group("optional")
+@group("standard")
 class ForwardTable(base_tests.SimpleDataPlane):
     """
     ForwardTable : Perform actions in flow table. Only for packet-out messages.
     If the output action.port in the packetout message = OFP.TABLE , then
     the packet implements the action specified in the matching flow of the FLOW-TABLE
-
-    Derived from Test case 70.60: Forward:TABLE
     """
 
     def runTest(self):
@@ -143,8 +139,6 @@ class ForwardTable(base_tests.SimpleDataPlane):
 class ForwardInPort(base_tests.SimpleDataPlane):
     """
     Verify implementation of the Forward: INPORT function
-
-    TestCase 70.70: Forward: InPort
     """
 
     def runTest(self):
@@ -192,7 +186,7 @@ class Output(base_tests.SimpleDataPlane):
         verify_packets(self, pktstr, [out_port])
 
 
-@group("optional")
+@group("standard")
 class ForwardOutputMultiple(base_tests.SimpleDataPlane):
     """
     Output to three ports
@@ -221,16 +215,6 @@ class ForwardOutputMultiple(base_tests.SimpleDataPlane):
         pktstr = str(pkt)
         self.dataplane.send(in_port, pktstr)
         verify_packets(self, pktstr, out_ports)
-
-
-@group("optional")
-class ForwardEnqueue(base_tests.SimpleDataPlane):
-    """
-    """
-
-    def runTest(self):
-        pass
-        # TODO
 
 
 class BaseModifyPacketTest(base_tests.SimpleDataPlane):
@@ -721,3 +705,33 @@ class SequentialExecution(BaseModifyPacketTest):
         pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=1)
         exp_pkt = simple_tcp_packet(dl_vlan_enable=True, vlan_vid=2)
         self.verify_modify(actions, pkt, exp_pkt)
+
+
+@group("standard")
+class ActionSetOutput(base_tests.SimpleDataPlane):
+    """
+    Output to a single port
+    """
+
+    def runTest(self):
+        in_port, out_port = openflow_ports(2)
+
+        actions = [ofp.action.output(out_port)]
+
+        pkt = simple_tcp_packet()
+
+        logging.info("Running actions test for %s", pp(actions))
+
+        delete_all_flows(self.controller)
+
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=packet_to_flow_match(self, pkt),
+                                     instructions=[ofp.instruction.write_actions(actions)]
+                                     )
+
+        pktstr = str(pkt)
+
+        logging.info("Sending packet, expecting output to port %d", out_port)
+        self.dataplane.send(in_port, pktstr)
+        verify_packets(self, pktstr, [out_port])

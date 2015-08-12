@@ -17,14 +17,13 @@ import ofp
 import time
 import copy
 from oftest.testutils import *
+import FuncUtils
 
 
 @group('standard')
 class StartupBahavior(base_tests.SimpleDataPlane):
     """
     Verify the startup mode, verify no packets are forwarded
-
-    Derived from Test case 10.10: Startup behavior with established control channel
     """
 
     def runTest(self):
@@ -41,8 +40,6 @@ class StartupBahavior(base_tests.SimpleDataPlane):
 class TCPDefaultPort(base_tests.SimpleDataPlane):
     """
     Test all methods of control channel establishment
-
-    Derived from Test case 10.20: Configure and establish control channel
     """
 
     def runTest(self):
@@ -53,8 +50,6 @@ class TCPDefaultPort(base_tests.SimpleDataPlane):
 class HelloVersionAnnouncement(base_tests.SimpleProtocol):
     """
     Check the Switch reports the correct version to the controller
-
-    Derived from Test case 10.30 Supported version announcement
     """
 
     def runTest(self):
@@ -69,8 +64,6 @@ class HelloVersionAnnouncement(base_tests.SimpleProtocol):
 class HelloVersionNegotiation(base_tests.SimpleProtocol):
     """
     Check the Switch negotiates the correct version with the controller
-
-    Derived from Test case 10.40: Supported version negotiation
     """
 
     def runTest(self):
@@ -84,8 +77,6 @@ class HelloVersionIncompatible(base_tests.SimpleProtocol):
     """
     Verify the switch reports the correct error message and terminates the
     connection when no common version can be negotiated with the controller.
-
-    Derived from Test case 10.50: No common version negotiated
     """
 
     def runTest(self):
@@ -101,3 +92,29 @@ class HelloVersionIncompatible(base_tests.SimpleProtocol):
                         "Hello Error with reason Version INCOMPATIBLE was not received")
 
 
+class ExistingFlowEntriesStayActive(base_tests.SimpleDataPlane):
+    """
+    Verify that flows stay active and timeout as configured after control channel re-establishment.
+    """
+
+    def runTest(self):
+        delete_all_flows(self.controller)
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+        # flow add
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     hard_timeout=1,
+                                     )
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port2)])],
+                                     hard_timeout=100
+                                     )
+        # tests
+        time.sleep(5)
+        stats = get_flow_stats(self, ofp.match())
+        self.assertEqual(len(stats), 1, "Expected empty flow stats reply")

@@ -16,13 +16,10 @@ from oftest.testutils import *
 @group('standard')
 class PortDown(base_tests.SimpleProtocol):
     """
-    Verify Controller is able to bring port up and down
-
-    Test case 30.40: Port administratively down
+    Verify that a port status change message is received, and that the bitmap reflects the change in the port config.
     """
 
     def runTest(self):
-        logging.info("Test case 30.40: Port administratively down")
         for of_port, _ in config["port_map"].items():  # Grab first port
             break
 

@@ -22,8 +22,6 @@ class OverlapChecking(base_tests.SimpleProtocol):
     """
     Verify that overlap checking generates an error when the controller
     attempts to add an overlapping flow to the flow table.
-
-    Derived from TestCase 40.10 --> Overlap checking
     """
 
     def runTest(self):
@@ -51,8 +49,6 @@ class NoOverlapChecking(base_tests.SimpleProtocol):
     """
     Verify that overlap checking generates an error when the controller
     attempts to add an overlapping flow to the flow table.
-
-    Derived from TestCase 40.20 --> No Overlap checking
     """
 
     def runTest(self):
@@ -86,8 +82,6 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
     """
     Verify that adding an identical flow overwrites the existing flow and
     clears the counters
-
-    Derived from Test case 40.30: Identical flows
     """
 
     def runTest(self):
@@ -117,60 +111,10 @@ class IdenticalFlows(base_tests.SimpleDataPlane):
         self.assertEqual(flow_stats[0].packet_count, 0)
 
 
-@group('standard')
-class NoTableAdd(base_tests.SimpleProtocol):
-    """
-    Verify that flow table full error messages are generated.
-
-    Test case 40.40: No table to add
-    """
-
-    def runTest(self):
-        delete_all_flows(self.controller)
-        in_port, out_port = openflow_ports(2)
-
-        for i in range(65539):
-            FuncUtils.flow_entry_install(self.controller,
-                                         "flow_add",
-                                         match=ofp.match([ofp.oxm.in_port(in_port)]),
-                                         instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port)])],
-                                         prio=i)
-            # read error message
-            response, _ = self.controller.poll(ofp.message.flow_mod_failed_error_msg, 0.00001)
-
-            if response is not None and (response.code == ofp.OFPFMFC_TABLE_FULL):
-                return
-        self.assertTrue(False, "No error message was received")
 
 
-@group('standard')
-class NeverValidOutputPort(base_tests.SimpleProtocol):
-    """
-    Verify that adding a flow with a never valid output port number triggers
-    correct error
 
-    Derived from Test case 40.50: Never valid output port
-    """
 
-    def runTest(self):
-        delete_all_flows(self.controller)
-
-        # serach unavalible port
-        for port_nonvalid in range(1000):
-            FuncUtils.flow_entry_install(self.controller,
-                                         "flow_add",
-                                         instructions=[
-                                             ofp.instruction.apply_actions([ofp.action.output(port_nonvalid)])
-                                         ])
-            _, port_config, _ = port_config_get(self.controller, port_nonvalid)
-            if port_config is None:
-                break
-
-        # read error message
-        response, _ = self.controller.poll(ofp.message.bad_action_error_msg)
-        self.assertTrue(response is not None,
-                        "No error message was received")
-        self.assertEqual(response.code, ofp.OFPBAC_BAD_OUT_PORT)
 
 
 @group('standard')
@@ -178,8 +122,6 @@ class ModifyNonExistentFlow(base_tests.SimpleProtocol):
     """
     Verify that modifying a non-existent flow adds the flow with zeroed
     counters.
-
-    Derived from Test case 40.80: Modify non-existent flow
     """
 
     def runTest(self):
@@ -202,8 +144,6 @@ class ModifyNonExistentFlow(base_tests.SimpleProtocol):
 class ModifyAction(base_tests.SimpleDataPlane):
     """
     Verify that modifying the action of a flow does not reset counters
-
-    Derived from Test case 40.90: Modify action preserves counters
     """
 
     def runTest(self):
@@ -272,8 +212,6 @@ class ModifyStrictAction(base_tests.SimpleDataPlane):
 class DeleteNonexistentFlow(base_tests.SimpleProtocol):
     """
     Verify that deleting a non-existent flow does not generate an error
-
-    Test case 40.110: Delete non-existent flow
     """
 
     def runTest(self):
@@ -297,8 +235,6 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
     Verify that deleting a flow with send flow removed flag set triggers a
     flow removed message, and deleting a flow without the send flow
     removed flag set does not trigger a flow removed message.
-
-    Derived from Test case 40.120: Delete flows with and without flow_removed flag set
     """
 
     def runTest(self):
@@ -333,8 +269,6 @@ class DeleteFlowWithFlag(base_tests.SimpleProtocol):
 class DeleteWithoutWildcards(base_tests.SimpleProtocol):
     """
     Verify that flow_mod delete and strict_delete map to the correct flows
-
-    Derived from Test case 40.140: Delete without wildcards
     """
 
     def runTest(self):
@@ -491,8 +425,6 @@ class DeleteIgnorePriorities(base_tests.SimpleProtocol):
 class StrictDeleteNotIgnorePriorities(base_tests.SimpleProtocol):
     """
     Verify that delete maps to the correct flows
-
-    Derived from Test case 40.180: Testing that strict_delete message does not ignore priorities
     """
 
     def runTest(self):
@@ -526,11 +458,52 @@ class StrictDeleteNotIgnorePriorities(base_tests.SimpleProtocol):
 
 
 @group('standard')
+class DefaultDelete(base_tests.SimpleProtocol):
+    """
+    Verify that delete maps to the correct flows
+    """
+
+    def runTest(self):
+        delete_all_flows(self.controller)
+        in_port, out_port = openflow_ports(2)
+
+        # flow add
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port)])],
+                                     )
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [out_port])
+        # flow del
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_del",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     )
+        # verify the num of flow entry is 0
+        flow_stats = get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 0)
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [])
+
+
+@group('standard')
+class DeleteAllTable(base_tests.SimpleProtocol):
+    """
+    OFPFC_DELETE command for "OFPTT_ALL" addresses all tables.
+    """
+
+    def runTest(self):
+        delete_all_flows(self.controller)
+        flow_stats = get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 0, len(flow_stats))
+
+
+@group('standard')
 class DeleteWithConstraintOutPort(base_tests.SimpleProtocol):
     """
     Verify that delete supports filtering on action out_port
-
-    Derived from Test case 40.190: Delete with constraint out_port
     """
 
     def runTest(self):
@@ -570,9 +543,6 @@ class DeleteWithConstraintOutPort(base_tests.SimpleProtocol):
 class OutportIgnoredForAddModify(base_tests.SimpleDataPlane):
     """
     Verify that out_port values in FLOW_MOD Add or Modify requests are ignored.
-    Derived from Test case 40.200: out_port ignored by Add and Modify requests
-
-    Test case 40.200: out_port ignored by Add and Modify requests
     """
 
     def runTest(self):
@@ -611,8 +581,6 @@ class OutportIgnoredForAddModify(base_tests.SimpleDataPlane):
 class TimeoutWithFlowRemovedFlag(base_tests.SimpleDataPlane):
     """
     Verify flow removed message for timeout is implemented
-
-    Derived from Test case 40.210: Timeout with flow removed message
     """
 
     def runTest(self):
@@ -704,4 +672,67 @@ class HardTimeout(base_tests.SimpleDataPlane):
 
         msg, _ = self.controller.poll(ofp.message.flow_removed)
         self.assertTrue(msg is not None, "Error message was not received")
-        self.assertEqual(msg.duration_sec,  1, "Time is not correct")
+        self.assertEqual(msg.duration_sec, 1, "Time is not correct")
+
+
+@group('standard')
+class FlowModWithTimeOutZero(base_tests.SimpleDataPlane):
+    """
+    Verify that flows with idle and hard timeouts of zero are installed indefinitely.
+    """
+
+    def runTest(self):
+        delete_all_flows(self.controller)
+        in_port, out_port = openflow_ports(2)
+
+        # flow add
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port)])],
+                                     hard_timeout=0,
+                                     idle_timeout=0
+                                     )
+        # send packet to in_port and verify
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [out_port])
+        time.sleep(3)
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [out_port])
+
+        flow_stats = get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 1)
+
+@group('standard')
+class PriorityLevelForFlowEntry(base_tests.SimpleDataPlane):
+    """
+    Verify that traffic matches against higher priority rules.
+    """
+
+    def runTest(self):
+        delete_all_flows(self.controller)
+        in_port, out_port1, out_port2 = openflow_ports(3)
+
+        # flow add
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port1)])],
+                                     prio = 10
+                                     )
+        FuncUtils.flow_entry_install(self.controller,
+                                     "flow_add",
+                                     match=ofp.match([ofp.oxm.in_port(in_port)]),
+                                     instructions=[ofp.instruction.apply_actions([ofp.action.output(out_port2)])],
+                                     prio = 11
+                                     )
+        # send packet to in_port and verify
+        flow_stats = get_flow_stats(self, ofp.match())
+        self.assertEqual(len(flow_stats), 2)
+
+        pkt = str(simple_tcp_packet())
+        self.dataplane.send(in_port, pkt)
+        verify_packets(self, pkt, [out_port2])
+        verify_no_packet(self, pkt, out_port1)
+

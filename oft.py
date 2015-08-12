@@ -65,8 +65,10 @@ CONFIG_DEFAULT = {
     "test_dir"           : None,
 
     # Switch connection options
-    "controller_host"    : "0.0.0.0",  # For passive bind
-    "controller_port"    : 6632,
+    "controller_host"    : "10.0.0.1",  # For passive bind
+    "controller_port"    : 6633,
+    "switch_ip"          : None,  # If not none, actively connect to switch
+     "platform"           : "eth",
     "platform_args"      : None,
     "platform_dir"       : os.path.join(ROOT_DIR, "platforms"),
     "interfaces"         : [],
@@ -89,7 +91,7 @@ CONFIG_DEFAULT = {
     "default_negative_timeout" : 0.01,
     "minsize"            : 0,
     "random_seed"        : None,
-    "disable_ipv6"       : True,
+    "disable_ipv6"       : False,
     "random_order"       : False,
 
     # Other configuration
