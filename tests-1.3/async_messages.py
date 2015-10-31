@@ -17,8 +17,6 @@ from oftest.testutils import *
 class OFPR_NO_MATCH_reason(base_tests.SimpleDataPlane):
     """
     Verify packet_in specifies the right reason (no match or send to controller)
-
-    Derived from Testsuite 90.10 Test case 90.10: OFPR_NO_MATCH uint8_t reason
     """
 
     def runTest(self):
@@ -44,9 +42,7 @@ class OFPR_NO_MATCH_reason(base_tests.SimpleDataPlane):
 
 class OFPR_NO_MATCH_buffer(base_tests.SimpleDataPlane):
     """
-    Verify packet_in OFPR_NO _MATCH implements buffer handling correct
-
-    Derived from Test case 90.20: OFPR_NO_MATCH unit8_t data[0] buffered
+    Verify packet_in OFPR_NO_MATCH implements buffer handling correct
     """
 
     def runTest(self):
@@ -234,8 +230,6 @@ class OFPT_PORT_STATUS(base_tests.SimpleDataPlane):
 class OFPT_PORT_MOD_No_Forward(base_tests.SimpleDataPlane):
     """
     Verify Controller is able to use the OFPT_PORT_MOD -OFPPFL_NO_FWD message to change port state on the DUT
-
-    Derived from Test case 90.130: OFPT_PORT_MOD - No_Forward
     """
 
     def runTest(self):
@@ -264,8 +258,6 @@ class OFPT_PORT_MOD_No_PacketIn(base_tests.SimpleDataPlane):
     """
     Verify Controller is able to use the OFPT_PORT_MOD-NO_PACKET_IN
     message to change port state on the DUT
-
-    Derived from Test case 90.140: OFPT_PORT_MOD - No_Packet_in
     """
 
     def runTest(self):
@@ -295,8 +287,6 @@ class OFPT_PORT_MOD_No_PacketIn(base_tests.SimpleDataPlane):
 
 class OFPT_QUEUE_GET_CONFIG_REPLY(base_tests.SimpleDataPlane):
     """
-
-    Derived from Test case 90.140: OFPT_PORT_MOD - No_Packet_in
     """
 
     def runTest(self):

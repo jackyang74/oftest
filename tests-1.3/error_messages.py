@@ -56,7 +56,7 @@ class OFPBRC_BAD_TYPE(base_tests.SimpleProtocol):
 
     def runTest(self):
         request = ofp.message.stats_request()
-        # change version to 0
+        # change version to OFPT_FEATURES_REPLY
         request.type = ofp.OFPT_FEATURES_REPLY
         self.controller.message_send(request)
 

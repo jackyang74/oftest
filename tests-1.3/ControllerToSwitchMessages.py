@@ -332,38 +332,6 @@ class ConfigSet_FRAG_MASK(base_tests.SimpleProtocol):
 
 
 
-
-
-
-
-
-
-
-
-
-# ##############################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @group('standard')
 class FeaturesRequest(base_tests.SimpleProtocol):
     """
@@ -416,8 +384,6 @@ class FlowAddRequest(base_tests.SimpleProtocol):
 class FlowDeleteRequest(base_tests.SimpleProtocol):
     """
     Verify that a basic Flow Delete request does not generate an error.
-
-    Derived from Test case 20.40: Verify basic Modify state Delete message is implemented
     """
 
     def runTest(self):
@@ -435,8 +401,6 @@ class FlowDeleteRequest(base_tests.SimpleProtocol):
 class FlowModifyRequest(base_tests.SimpleProtocol):
     """
     Verify that a basic Modify State Modify request does not generate an error.
-
-    Derived from Test case 20.50: Verify basic Modify Flow Modify message is implemented
     """
 
     def runTest(self):
@@ -454,8 +418,6 @@ class FlowModifyRequest(base_tests.SimpleProtocol):
 class StatsRequest(base_tests.SimpleProtocol):
     """
     Verify that a basic Read state request does not generate an error.
-
-    Derived from Test case 20.60: Verify basic Read state is implemented
     """
 
     def runTest(self):
@@ -470,8 +432,6 @@ class StatsRequest(base_tests.SimpleProtocol):
 class PacketOut(base_tests.SimpleDataPlane):
     """
     Verify that a basic send packet request does not generate an error
-
-    Derived from Test case 20.70: Verify basic send packet is implemented
 
     Send packet out message to controller for each dataplane port and
     verify the packet appears on the appropriate dataplane port
@@ -490,19 +450,10 @@ class PacketOut(base_tests.SimpleDataPlane):
             self.controller.message_send(msg)
             verify_packets(self, pkt, [of_port])
 
-
-
-
-
-
-
-
 @group('standard')
 class HelloRequest(base_tests.SimpleProtocol):
     """
     Verify basic Hello message generation with correct version field
-
-    Test case 20.100: Verify basic Hello messages are implemented
     """
 
     def runTest(self):
@@ -514,8 +465,6 @@ class HelloRequest(base_tests.SimpleProtocol):
 class Echo(base_tests.SimpleProtocol):
     """
     Verify basic Echo Reply generation
-
-    Test case 20.110: Verify Echo Reply messages are implemented
     """
 
     def runTest(self):
